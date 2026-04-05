@@ -1,0 +1,137 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100;300;400;500;700;900&family=JetBrains+Mono:wght@400;700&display=swap');
+
+@theme {
+  --font-sans: "Vazirmatn", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+body {
+  font-family: "Vazirmatn", sans-serif;
+  @apply transition-colors duration-500 antialiased;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 2px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  @apply bg-current opacity-20 rounded-full;
+}
+
+/* Strict black theme as default */
+:root {
+  --bg-color: #000000;
+  --text-color: #FFFFFF;
+  --border-color: rgba(255, 255, 255, 0.1);
+  --muted-text: rgba(255, 255, 255, 0.5);
+  --hover-bg: rgba(255, 255, 255, 0.05);
+  background-color: var(--bg-color);
+  color: var(--text-color);
+}
+
+input, select, textarea {
+  @apply bg-black border-white/10 text-white placeholder:text-white/20 rounded-xl focus:border-white/40 focus:ring-0 transition-all;
+}
+
+/* Global utility classes for the strict theme */
+.theme-bg { background-color: var(--bg-color); }
+.theme-text { color: var(--text-color); }
+.theme-border { border-color: var(--border-color); }
+.theme-muted { color: var(--muted-text); }
+.theme-hover:hover { background-color: var(--hover-bg); }
+
+/* Sidebar Active State Fix */
+.sidebar-active-bg {
+  background-color: #FFFFFF !important;
+  color: #000000 !important;
+}
+
+.sidebar-active-indicator {
+  background-color: #FFFFFF !important;
+}
+
+/* Overriding common Tailwind classes to enforce the theme */
+.bg-white, .bg-slate-50, .bg-slate-100, .bg-slate-200, .bg-slate-900, .bg-slate-800, .bg-slate-700 {
+  background-color: #000000 !important;
+}
+
+.text-slate-900, .text-slate-800, .text-slate-700, .text-slate-600, .text-slate-500, .text-slate-400 {
+  color: #FFFFFF !important;
+}
+
+.border-slate-100, .border-slate-200, .border-slate-300, .border-slate-700, .border-slate-800 {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Smooth transitions for all theme-related properties */
+* {
+  @apply transition-colors duration-300;
+}
+
+/* Monospace for numbers */
+.font-mono-data {
+  font-family: "JetBrains Mono", monospace;
+  letter-spacing: -0.02em;
+}
+
+/* Professional Card Style */
+.pro-card {
+  @apply border rounded-[2rem] p-6 transition-all duration-300;
+  border-color: var(--border-color);
+  background-color: rgba(255, 255, 255, 0.03) !important;
+}
+
+.pro-card:hover {
+  @apply shadow-2xl;
+  transform: translateY(-2px);
+  background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+.item-card {
+  @apply border rounded-[2rem] p-6 transition-all duration-300 flex flex-col gap-4 relative overflow-hidden;
+  border-color: var(--border-color);
+  background-color: rgba(255, 255, 255, 0.03) !important;
+}
+
+.item-card:hover {
+  @apply shadow-2xl;
+  transform: translateY(-2px);
+  background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #printable-receipt, #printable-receipt * {
+    visibility: visible;
+  }
+  #printable-receipt {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    background: white !important;
+    color: black !important;
+    padding: 20px;
+  }
+  .no-print {
+    display: none !important;
+  }
+}
+
+/* Hide number input arrows */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type=number] {
+  -moz-appearance: textfield;
+}

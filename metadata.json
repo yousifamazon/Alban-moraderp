@@ -1,0 +1,5 @@
+{
+  "name": "Alban Murad ERP",
+  "description": "Advanced ERP system with Sales POS (discounts, returns, customer debt), categorized expense reporting, supplier management, and automated daily backups.",
+  "requestFramePermissions": []
+}
