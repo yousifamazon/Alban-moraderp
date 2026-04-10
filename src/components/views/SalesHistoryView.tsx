@@ -10,18 +10,22 @@ import {
   FileDown,
   Download
 } from 'lucide-react';
-import { Sale } from '../../types';
+import { Sale, Product, Customer } from '../../types';
 import { cn } from '../../lib/utils';
 import * as XLSX from 'xlsx';
+import { PrintableInvoice } from '../PrintableInvoice';
 
 interface SalesHistoryViewProps {
   sales: Sale[];
+  products: Product[];
+  customers: Customer[];
   currency: string;
+  invoiceTemplate?: string;
   onPrint: (title: string, content: string) => void;
   onBack: () => void;
 }
 
-export function SalesHistoryView({ sales, currency, onPrint, onBack }: SalesHistoryViewProps) {
+export function SalesHistoryView({ sales, products, customers, currency, invoiceTemplate, onPrint, onBack }: SalesHistoryViewProps) {
   const [driverFilter, setDriverFilter] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -29,6 +33,8 @@ export function SalesHistoryView({ sales, currency, onPrint, onBack }: SalesHist
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [sortByTotal, setSortByTotal] = useState<'none' | 'asc' | 'desc'>('none');
   const [showFilters, setShowFilters] = useState(false);
+  const [showPrintPreview, setShowPrintPreview] = useState(false);
+  const [selectedReceipt, setSelectedReceipt] = useState<any>(null);
   
   const groupedSales = (sales || [])
     .filter(s => {
@@ -82,39 +88,13 @@ export function SalesHistoryView({ sales, currency, onPrint, onBack }: SalesHist
   };
 
   const printReceipt = (h: any) => {
-    const content = `
-      <div style="margin-bottom: 20px;">
-        <p><strong>کڕیار:</strong> ${h.customerName}</p>
-        <p><strong>ژمارەی وەسڵ:</strong> ${h.receiptId || 'وەسڵی کۆن'}</p>
-        <p><strong>جۆری پارەدان:</strong> ${h.paymentMethod === 'cash' ? 'نەختینە' : 'قەرز'}</p>
-        ${h.source ? `<p><strong>سەرچاوەی داواکاری:</strong> ${h.source === 'driver' ? 'شۆفێر' : h.source === 'shop' ? 'دوکان' : 'فرۆشتنی ڕاستەوخۆ'}</p>` : ''}
-      </div>
-      <table>
-        <thead>
-          <tr>
-            <th>ناوی کاڵا</th>
-            <th style="text-align: center;">بڕ</th>
-            <th style="text-align: center;">نرخ</th>
-            <th style="text-align: left;">کۆی گشتی</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${h.items.map((item: Sale) => `
-            <tr>
-              <td>${item.itemName}</td>
-              <td style="text-align: center;">${item.quantity}</td>
-              <td style="text-align: center;">${(item.total / item.quantity).toLocaleString()}</td>
-              <td style="text-align: left;">${item.total.toLocaleString()}</td>
-            </tr>
-          `).join('')}
-          <tr style="font-weight: bold; background: #f8fafc;">
-            <td colspan="3" style="text-align: right; padding: 12px;">کۆی گشتی</td>
-            <td style="text-align: left; padding: 12px;">${h.total.toLocaleString()} ${currency}</td>
-          </tr>
-        </tbody>
-      </table>
-    `;
-    onPrint(`وەسڵی فرۆشتن - ${h.receiptId || h.id}`, content);
+    const customer = customers.find(c => c.name === h.customerName);
+    setSelectedReceipt({ ...h, customer });
+    setShowPrintPreview(true);
+  };
+
+  const handlePrint = () => {
+    window.print();
   };
 
   return (
@@ -293,6 +273,46 @@ export function SalesHistoryView({ sales, currency, onPrint, onBack }: SalesHist
           ))
         )}
       </div>
+
+      {/* Print Preview Modal */}
+      {showPrintPreview && selectedReceipt && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md no-print">
+          <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white dark:bg-slate-900 rounded-[2.5rem] w-full max-w-lg flex flex-col shadow-2xl border border-slate-100 dark:border-slate-800">
+            <div className="p-8 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+              <h3 className="font-black text-2xl text-slate-800 dark:text-slate-100">پیشاندانی وەسڵ</h3>
+              <button onClick={() => setShowPrintPreview(false)} className="p-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-2xl text-slate-500 transition-all">
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="p-8 overflow-y-auto max-h-[60vh]">
+              <div id="printable-receipt" className="bg-white text-black p-4 rounded-xl border border-slate-200 overflow-x-auto">
+                <PrintableInvoice 
+                  receiptId={selectedReceipt.receiptId || selectedReceipt.id.toString()}
+                  date={selectedReceipt.date}
+                  customer={selectedReceipt.customer}
+                  customerName={selectedReceipt.customerName}
+                  items={selectedReceipt.items}
+                  total={selectedReceipt.total}
+                  currency={currency}
+                  products={products}
+                  template={invoiceTemplate}
+                />
+              </div>
+            </div>
+            
+            <div className="p-8 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/30 flex gap-4">
+              <button onClick={() => setShowPrintPreview(false)} className="flex-1 py-4 rounded-2xl font-black text-sm bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 transition-all active:scale-95">
+                داخستن
+              </button>
+              <button onClick={handlePrint} className="flex-[2] bg-emerald-600 text-white py-4 rounded-2xl font-black text-sm shadow-xl shadow-emerald-200 dark:shadow-none active:scale-95 flex items-center justify-center gap-2">
+                <Printer size={20} />
+                چاپکردن
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </motion.div>
   );
 }

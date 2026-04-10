@@ -39,44 +39,31 @@ export function DriverSalesReportView({ sales, currency, onPrint, onBack }: Driv
   }, [sales]);
 
   const handlePrint = () => {
-    const html = `
-      <html dir="rtl">
-        <head>
-          <title>ڕاپۆرتی شۆفێرەکان</title>
-          <style>
-            body { font-family: Arial, sans-serif; padding: 40px; }
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            th, td { border: 1px solid #ddd; padding: 12px; text-align: right; }
-            th { background-color: #f8f9fa; }
-            h1 { text-align: center; }
-          </style>
-        </head>
-        <body>
-          <h1>ڕاپۆرتی فرۆشتنی شۆفێرەکان</h1>
-          <table>
-            <thead>
+    const content = `
+      <div style="margin-bottom: 30px;">
+        <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+          <thead>
+            <tr style="background: #f8fafc;">
+              <th style="padding: 12px; border: 1px solid #e2e8f0; text-align: right;">ناوی شۆفێر</th>
+              <th style="padding: 12px; border: 1px solid #e2e8f0; text-align: right;">کۆی فرۆشتن</th>
+              <th style="padding: 12px; border: 1px solid #e2e8f0; text-align: right;">ژمارەی مامەڵە</th>
+              <th style="padding: 12px; border: 1px solid #e2e8f0; text-align: right;">تێکڕای فرۆشتن</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${driverStats.map(s => `
               <tr>
-                <th>ناوی شۆفێر</th>
-                <th>کۆی فرۆشتن</th>
-                <th>ژمارەی مامەڵە</th>
-                <th>تێکڕای فرۆشتن</th>
+                <td style="padding: 12px; border: 1px solid #e2e8f0;">${s.name}</td>
+                <td style="padding: 12px; border: 1px solid #e2e8f0; font-weight: bold;">${s.totalSales.toLocaleString()} ${currency}</td>
+                <td style="padding: 12px; border: 1px solid #e2e8f0;">${s.count}</td>
+                <td style="padding: 12px; border: 1px solid #e2e8f0;">${s.avg.toLocaleString()} ${currency}</td>
               </tr>
-            </thead>
-            <tbody>
-              ${driverStats.map(s => `
-                <tr>
-                  <td>${s.name}</td>
-                  <td>${s.totalSales.toLocaleString()} ${currency}</td>
-                  <td>${s.count}</td>
-                  <td>${s.avg.toLocaleString()} ${currency}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </body>
-      </html>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
     `;
-    onPrint('ڕاپۆرتی شۆفێرەکان', html);
+    onPrint('ڕاپۆرتی فرۆشتنی شۆفێرەکان', content);
   };
 
   return (

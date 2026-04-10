@@ -12,12 +12,15 @@ import {
   Calendar, 
   CheckCircle,
   Plus,
-  Database
+  Database,
+  AlertTriangle,
+  ChevronLeft
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { StatCard } from '../ui/StatCard';
 import { Card } from '../ui/Card';
 import { ERPData } from '../../types';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 interface HubViewProps {
   data: ERPData;
@@ -47,6 +50,18 @@ export function HubView({ data, totalSales, totalExpenses, totalWaste, netProfit
 
   const growth = lastMonthSales === 0 ? (currentMonthSales > 0 ? 100 : 0) : ((currentMonthSales - lastMonthSales) / lastMonthSales) * 100;
   const isPositiveGrowth = growth >= 0;
+
+  const unreadAlerts = data.alerts?.filter(a => !a.isRead) || [];
+
+  // Prepare chart data for last 7 days
+  const last7Days = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (6 - i));
+    const dateStr = d.toLocaleDateString('ku-IQ', { day: 'numeric', month: 'short' });
+    const daySales = data.sales.filter(s => new Date(s.id).toDateString() === d.toDateString())
+      .reduce((sum, s) => sum + s.total, 0);
+    return { name: dateStr, sales: daySales };
+  });
 
   return (
     <motion.div
@@ -100,107 +115,106 @@ export function HubView({ data, totalSales, totalExpenses, totalWaste, netProfit
           currency={data.settings.currency} 
         />
         <StatCard 
-          label="بەهەدەردراو" 
+          label="قازانجی گشتی" 
+          value={netProfit} 
+          icon={<TrendingUp size={20} />}
+          color="text-blue-500" 
+          currency={data.settings.currency} 
+        />
+        <StatCard 
+          label="بەفیڕۆچوون" 
           value={totalWaste} 
           icon={<Trash2 size={20} />}
           color="text-orange-500" 
           currency={data.settings.currency} 
         />
-        <StatCard 
-          label="کۆی قەرزەکان" 
-          value={data.customers?.reduce((sum: number, c: any) => sum + (c.debt || 0), 0) || 0} 
-          icon={<Users size={20} />}
-          color="text-blue-500" 
-          currency={data.settings.currency} 
-        />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Low Stock Panel */}
-        <Card className="lg:col-span-2 p-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Sales Chart */}
+        <div className="lg:col-span-2 bg-white/5 border theme-border rounded-[2.5rem] p-8">
           <div className="flex items-center justify-between mb-8">
-            <h4 className="font-black text-xl tracking-tight">ئاگاداری کۆگا</h4>
+            <div>
+              <h3 className="text-xl font-black tracking-tight">فرۆشتنی ٧ ڕۆژی ڕابردوو</h3>
+              <p className="text-[10px] font-bold theme-muted uppercase tracking-widest mt-1">گۆڕانکارییەکانی فرۆشتن</p>
+            </div>
+          </div>
+          <div className="h-[300px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={last7Days}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                <XAxis 
+                  dataKey="name" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: 'bold' }} 
+                />
+                <YAxis 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: 'bold' }}
+                />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: '#000', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '1rem' }}
+                  itemStyle={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }}
+                />
+                <Bar dataKey="sales" radius={[8, 8, 0, 0]}>
+                  {last7Days.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={index === last7Days.length - 1 ? '#10b981' : 'rgba(255,255,255,0.1)'} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Alerts Summary */}
+        <div className="bg-white/5 border theme-border rounded-[2.5rem] p-8">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h3 className="text-xl font-black tracking-tight">ئاگادارکردنەوەکان</h3>
+              <p className="text-[10px] font-bold theme-muted uppercase tracking-widest mt-1">پێویستی بە سەرنجە</p>
+            </div>
             <button 
-              onClick={() => setActiveSection('low-stock')}
-              className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-[10px] font-black hover:bg-slate-200 dark:hover:bg-slate-700 transition-all"
+              onClick={() => setActiveSection('notifications')}
+              className="p-2 rounded-xl theme-hover border theme-border"
             >
-              بینینی هەمووی
+              <Bell size={18} />
             </button>
           </div>
           
-          {data.products.filter(p => p.stock <= p.minStock).length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {data.products.filter(p => p.stock <= p.minStock).slice(0, 4).map(p => (
-                <div key={p.id} className="flex justify-between items-center p-4 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                      <Package size={16} className="opacity-40" />
-                    </div>
-                    <div>
-                      <p className="font-black text-sm">{p.name}</p>
-                      <p className="text-[10px] font-black text-red-500 mt-0.5">{p.stock} دانە ماوە</p>
-                    </div>
+          <div className="space-y-4">
+            {unreadAlerts.length === 0 ? (
+              <div className="text-center py-12 opacity-20">
+                <CheckCircle size={40} className="mx-auto mb-2" />
+                <p className="text-xs font-bold">هەموو شتێک باشە</p>
+              </div>
+            ) : (
+              unreadAlerts.slice(0, 4).map(alert => (
+                <div key={alert.id} className="flex items-start gap-3 p-4 rounded-2xl bg-white/5 border theme-border">
+                  <div className={cn(
+                    "p-2 rounded-lg",
+                    alert.severity === 'error' ? "bg-red-500/10 text-red-500" : 
+                    alert.severity === 'warning' ? "bg-yellow-500/10 text-yellow-500" : "bg-blue-500/10 text-blue-500"
+                  )}>
+                    <AlertTriangle size={14} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-black truncate">{alert.title}</p>
+                    <p className="text-[10px] theme-muted truncate">{alert.message}</p>
                   </div>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className="h-32 flex flex-col justify-center items-center text-slate-400 dark:text-slate-500 gap-2">
-              <CheckCircle size={32} className="opacity-20" />
-              <p className="text-xs font-bold italic opacity-40">هەموو کاڵاکان لە ئاستێکی باشدان</p>
-            </div>
-          )}
-        </Card>
-
-        {/* Recent Activity */}
-        <div className="space-y-6">
-          <Card className="p-8">
-            <h4 className="font-black text-xl tracking-tight mb-8">دوایین چالاکییەکان</h4>
-            <div className="space-y-6">
-              {[
-                { icon: <ShoppingCart size={16} />, color: "text-blue-500", label: "فرۆشتنی نوێ", time: "٢ خولەک پێش ئێستا" },
-                { icon: <Plus size={16} />, color: "text-emerald-500", label: "زیادکردنی کاڵا", time: "١ کاتژمێر پێش ئێستا" },
-                { icon: <Users size={16} />, color: "text-purple-500", label: "کڕیاری نوێ", time: "٥ کاتژمێر پێش ئێستا" },
-              ].map((activity, idx) => (
-                <div key={idx} className="flex items-center gap-4">
-                  <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center shrink-0", activity.color, "bg-slate-100 dark:bg-slate-800")}>
-                    {activity.icon}
-                  </div>
-                  <div>
-                    <p className="text-xs font-black">{activity.label}</p>
-                    <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold mt-0.5">{activity.time}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-            
-            <button 
-              onClick={() => setActiveSection('reports-hub')}
-              className="w-full mt-8 py-4 rounded-xl font-black text-[10px] shadow-lg transition-all hover:scale-[1.02] active:scale-95 bg-slate-900 text-white dark:bg-white dark:text-black"
-            >
-              بینینی ڕاپۆرتی گشتی
-            </button>
-          </Card>
-
-          <Card className="p-8 bg-blue-500/5 border-blue-500/10">
-            <h4 className="font-black text-xl tracking-tight mb-6">پاراستنی داتا</h4>
-            <p className="text-xs theme-muted mb-6 leading-relaxed">بۆ پاراستنی زانیارییەکانت، پێشنیار دەکەین ڕۆژانە پاشەکەوتی داتاکان بکەیت.</p>
-            <div className="grid grid-cols-1 gap-3">
+              ))
+            )}
+            {unreadAlerts.length > 4 && (
               <button 
-                onClick={onBackup}
-                className="w-full py-4 rounded-xl font-black text-[10px] bg-blue-500 text-white shadow-xl shadow-blue-500/20 flex items-center justify-center gap-2"
+                onClick={() => setActiveSection('notifications')}
+                className="w-full py-3 text-[10px] font-black uppercase tracking-widest theme-muted hover:text-white transition-colors"
               >
-                <Database size={14} />
-                پاشەکەوتکردنی داتا (JSON)
+                بینینی هەموو ({unreadAlerts.length})
               </button>
-              <button 
-                onClick={() => setActiveSection('settings')}
-                className="w-full py-4 rounded-xl font-black text-[10px] theme-hover border theme-border flex items-center justify-center gap-2"
-              >
-                ڕێکخستنەکان
-              </button>
-            </div>
-          </Card>
+            )}
+          </div>
         </div>
       </div>
     </motion.div>

@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Animal, MilkingRecord, HealthRecord, Employee, FeedLog, VaccinationLog } from './types';
 import { motion } from 'motion/react';
-import { ChevronLeft, Plus, Trash2, Edit2, ClipboardCheck, Database, Milk, Syringe, Wheat } from 'lucide-react';
-import { cn } from './lib/utils';
+import { ChevronLeft, Plus, Trash2, Edit2, ClipboardCheck, Database, Milk, Syringe, Wheat, Skull, DollarSign, CheckCircle, AlertTriangle } from 'lucide-react';
+import { cn, customConfirm } from './lib/utils';
 
 export function LivestockView({ animals, milkingRecords, healthRecords, feedLogs, vaccinationLogs, employees, onSave, onBack, initialTab = 'animals' }: { 
   animals: Animal[], 
@@ -17,6 +17,7 @@ export function LivestockView({ animals, milkingRecords, healthRecords, feedLogs
 }) {
   const [activeTab, setActiveTab] = useState<'animals' | 'milking' | 'health' | 'feed' | 'vaccination' | 'analysis'>(initialTab as any);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showStatusModal, setShowStatusModal] = useState<number | null>(null);
   const [isCustomType, setIsCustomType] = useState(false);
   const [customType, setCustomType] = useState('');
   
@@ -103,6 +104,12 @@ export function LivestockView({ animals, milkingRecords, healthRecords, feedLogs
     setVaccinationForm({ date: new Date().toISOString().split('T')[0] });
   };
 
+  const handleUpdateStatus = (id: number, status: Animal['status'], extraData?: Partial<Animal>) => {
+    const updatedAnimals = animals.map(a => a.id === id ? { ...a, status, ...extraData } : a);
+    onSave(updatedAnimals, milkingRecords, healthRecords, feedLogs, vaccinationLogs);
+    setShowStatusModal(null);
+  };
+
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 text-slate-900 dark:text-slate-100">
       <div className="flex justify-between items-center mb-4">
@@ -143,17 +150,93 @@ export function LivestockView({ animals, milkingRecords, healthRecords, feedLogs
                 </div>
                 <div className="flex gap-2 mt-2">
                   <span className="text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-2 py-1 rounded-full">{animal.weight}kg</span>
-                  <span className={cn("text-xs px-2 py-1 rounded-full", animal.status === 'تەندروست' ? "bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400" : "bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400")}>{animal.status}</span>
+                  <span className={cn(
+                    "text-xs px-2 py-1 rounded-full", 
+                    animal.status === 'تەندروست' ? "bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400" : 
+                    animal.status === 'مردوو' ? "bg-slate-50 dark:bg-slate-900/30 text-slate-600 dark:text-slate-400" :
+                    animal.status === 'فرۆشراو' ? "bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400" :
+                    "bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400"
+                  )}>{animal.status}</span>
                 </div>
                 <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-800">
                   <p className="text-[10px] text-slate-500">تێچووی ئالیک: <span className="font-bold text-slate-700 dark:text-slate-300">{feedLogs.filter(f => f.animalId === animal.id).reduce((sum, f) => sum + f.cost, 0).toLocaleString()}</span></p>
+                  {animal.status === 'مردوو' && <p className="text-[10px] text-red-500 font-bold mt-1">مردوو: {animal.deathReason} ({animal.deathDate})</p>}
+                  {animal.status === 'فرۆشراو' && <p className="text-[10px] text-amber-500 font-bold mt-1">فرۆشراو: {animal.salePrice?.toLocaleString()} ({animal.saleDate})</p>}
                 </div>
               </div>
-              <button onClick={() => onSave(animals.filter(a => a.id !== animal.id), milkingRecords, healthRecords, feedLogs, vaccinationLogs)} className="text-red-400 hover:text-red-600 p-2">
-                <Trash2 size={18} />
-              </button>
+              <div className="flex flex-col gap-2">
+                <button 
+                  onClick={() => setShowStatusModal(animal.id)}
+                  className="text-blue-400 hover:text-blue-600 p-2"
+                >
+                  <Edit2 size={18} />
+                </button>
+                <button onClick={async () => {
+                  if (await customConfirm('ئایا دڵنیای لە سڕینەوەی ئەم ئاژەڵە؟')) {
+                    onSave(animals.filter(a => a.id !== animal.id), milkingRecords, healthRecords, feedLogs, vaccinationLogs)
+                  }
+                }} className="text-red-400 hover:text-red-600 p-2">
+                  <Trash2 size={18} />
+                </button>
+              </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Status Modal */}
+      {showStatusModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] max-w-md w-full shadow-2xl border border-slate-100 dark:border-slate-800">
+            <h3 className="text-2xl font-black mb-6">گۆڕینی باری ئاژەڵ</h3>
+            <div className="grid grid-cols-1 gap-4">
+              <button 
+                onClick={() => handleUpdateStatus(showStatusModal, 'تەندروست')}
+                className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 dark:bg-slate-800 hover:bg-green-500 hover:text-white transition-all group"
+              >
+                <span className="font-bold">تەندروست</span>
+                <CheckCircle className="opacity-40 group-hover:opacity-100" size={20} />
+              </button>
+              <button 
+                onClick={() => handleUpdateStatus(showStatusModal, 'نەخۆش')}
+                className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 dark:bg-slate-800 hover:bg-red-500 hover:text-white transition-all group"
+              >
+                <span className="font-bold">نەخۆش</span>
+                <AlertTriangle className="opacity-40 group-hover:opacity-100" size={20} />
+              </button>
+              <button 
+                onClick={() => {
+                  const reason = prompt('هۆکاری مردن:');
+                  if (reason) {
+                    handleUpdateStatus(showStatusModal, 'مردوو', { 
+                      deathDate: new Date().toISOString().split('T')[0],
+                      deathReason: reason
+                    });
+                  }
+                }}
+                className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-900 hover:text-white transition-all group"
+              >
+                <span className="font-bold">مردوو</span>
+                <Skull className="opacity-40 group-hover:opacity-100" size={20} />
+              </button>
+              <button 
+                onClick={() => {
+                  const price = prompt('نرخی فرۆشتن:');
+                  if (price) {
+                    handleUpdateStatus(showStatusModal, 'فرۆشراو', { 
+                      saleDate: new Date().toISOString().split('T')[0],
+                      salePrice: Number(price)
+                    });
+                  }
+                }}
+                className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 dark:bg-slate-800 hover:bg-amber-500 hover:text-white transition-all group"
+              >
+                <span className="font-bold">فرۆشراو</span>
+                <DollarSign className="opacity-40 group-hover:opacity-100" size={20} />
+              </button>
+            </div>
+            <button onClick={() => setShowStatusModal(null)} className="w-full mt-8 py-4 rounded-2xl font-black text-xs theme-muted hover:text-slate-900 dark:hover:text-white transition-colors">پاشگەزبوونەوە</button>
+          </motion.div>
         </div>
       )}
 

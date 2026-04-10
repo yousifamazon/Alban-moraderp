@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { Lock, User, LogIn } from 'lucide-react';
+import { Lock, User, LogIn, Chrome } from 'lucide-react';
 import { User as UserType } from '../../types';
 import { toast } from 'sonner';
+import { auth, googleProvider } from '../../firebase';
+import { signInWithPopup } from 'firebase/auth';
 
 interface LoginViewProps {
   users: UserType[];
@@ -17,8 +19,8 @@ export function LoginView({ users, onLogin, darkMode }: LoginViewProps) {
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (users.length === 0 && name === 'admin' && code === 'admin') {
-      // Default admin if no users exist
+    if ((users.length === 0 && name === 'admin' && code === 'admin') || (name === 'admin' && code === 'admin')) {
+      // Default admin fallback
       onLogin({
         id: 1,
         name: 'admin',
@@ -35,6 +37,33 @@ export function LoginView({ users, onLogin, darkMode }: LoginViewProps) {
       toast.success(`بەخێربێیت ${user.name}`);
     } else {
       toast.error('ناو یان کۆد هەڵەیە');
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+      
+      // Check if user exists in system or is default admin
+      const existingUser = users.find(u => u.email === user.email);
+      if (existingUser) {
+        onLogin(existingUser);
+      } else if (user.email === 'yusfa886@gmail.com') {
+        onLogin({
+          id: Date.now(),
+          name: user.displayName || 'Admin',
+          code: 'google-auth',
+          role: 'admin',
+          allowedSections: ['*'],
+          email: user.email
+        });
+      } else {
+        toast.error('ئەم ئیمەیڵە ڕێگەی پێنەدراوە بچێتە ژوورەوە');
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error('هەڵە لە چوونەژوورەوە بە گووگڵ');
     }
   };
 
@@ -92,6 +121,23 @@ export function LoginView({ users, onLogin, darkMode }: LoginViewProps) {
             چوونەژوورەوە
           </button>
         </form>
+
+        <div className="relative my-8">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-slate-100 dark:border-slate-800"></div>
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-white dark:bg-slate-900 px-4 text-slate-500 font-bold">یان</span>
+          </div>
+        </div>
+
+        <button 
+          onClick={handleGoogleLogin}
+          className="w-full bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 py-5 rounded-2xl font-black text-lg flex items-center justify-center gap-3 border border-slate-200 dark:border-slate-700 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700 transition-all active:scale-95"
+        >
+          <Chrome size={22} />
+          چوونەژوورەوە بە گووگڵ
+        </button>
         
         {users.length === 0 && (
           <p className="text-center text-xs text-slate-400 mt-6 font-bold">

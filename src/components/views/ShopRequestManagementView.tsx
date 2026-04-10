@@ -22,11 +22,12 @@ export function ShopRequestManagementView({ shopRequests, onUpdateStatus, onDele
     return matchesSearch && matchesFilter;
   }).sort((a, b) => b.id - a.id);
 
-  const handleDelete = (id: number) => {
-    customConfirm('دڵنیایت لە سڕینەوەی ئەم داواکارییە؟', () => {
+  const handleDelete = async (id: number) => {
+    const confirmed = await customConfirm('دڵنیایت لە سڕینەوەی ئەم داواکارییە؟');
+    if (confirmed) {
       onDelete(id);
       toast.success('داواکارییەکە سڕایەوە');
-    });
+    }
   };
 
   return (

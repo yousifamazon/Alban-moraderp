@@ -92,58 +92,36 @@ export function ProductListView({ products, currency, onPrint, onUpdate, onBack 
   };
 
   const handlePrint = () => {
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
-
-    const html = `
-      <html dir="rtl">
-        <head>
-          <title>لیستی کاڵاکان</title>
-          <style>
-            body { font-family: Arial, sans-serif; padding: 40px; }
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            th, td { border: 1px solid #ddd; padding: 12px; text-align: right; }
-            th { background-color: #f8f9fa; font-weight: bold; }
-            h1 { text-align: center; color: #333; }
-            .header-info { display: flex; justify-content: space-between; margin-bottom: 30px; }
-          </style>
-        </head>
-        <body>
-          <h1>لیستی کاڵاکان</h1>
-          <div class="header-info">
-            <span>بەروار: ${new Date().toLocaleDateString('ku-IQ')}</span>
-            <span>کۆی کاڵاکان: ${filteredAndSortedProducts.length}</span>
-          </div>
-          <table>
-            <thead>
-              <tr>
-                <th>ناو</th>
-                <th>باڕکۆد</th>
-                <th>جۆر</th>
-                <th>نرخ</th>
-                <th>بڕ</th>
-                <th>کۆی نرخ</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${filteredAndSortedProducts.map(p => `
-                <tr>
-                  <td>${p.name}</td>
-                  <td>${p.barcode}</td>
-                  <td>${p.category || '-'}</td>
-                  <td>${p.price.toLocaleString()}</td>
-                  <td>${p.stock} ${p.unit}</td>
-                  <td>${(p.price * p.stock).toLocaleString()}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </body>
-      </html>
+    const content = `
+      <div style="margin-bottom: 20px; display: flex; justify-content: space-between; font-weight: bold; color: #64748b;">
+        <span>کۆی کاڵاکان: ${filteredAndSortedProducts.length}</span>
+      </div>
+      <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+        <thead>
+          <tr style="background: #f8fafc;">
+            <th style="padding: 12px; border: 1px solid #e2e8f0; text-align: right;">ناو</th>
+            <th style="padding: 12px; border: 1px solid #e2e8f0; text-align: right;">باڕکۆد</th>
+            <th style="padding: 12px; border: 1px solid #e2e8f0; text-align: right;">جۆر</th>
+            <th style="padding: 12px; border: 1px solid #e2e8f0; text-align: right;">نرخ</th>
+            <th style="padding: 12px; border: 1px solid #e2e8f0; text-align: right;">بڕ</th>
+            <th style="padding: 12px; border: 1px solid #e2e8f0; text-align: right;">کۆی نرخ</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${filteredAndSortedProducts.map(p => `
+            <tr>
+              <td style="padding: 12px; border: 1px solid #e2e8f0;">${p.name}</td>
+              <td style="padding: 12px; border: 1px solid #e2e8f0;">${p.barcode}</td>
+              <td style="padding: 12px; border: 1px solid #e2e8f0;">${p.category || '-'}</td>
+              <td style="padding: 12px; border: 1px solid #e2e8f0; font-weight: bold;">${p.price.toLocaleString()} ${currency}</td>
+              <td style="padding: 12px; border: 1px solid #e2e8f0;">${p.stock} ${p.unit}</td>
+              <td style="padding: 12px; border: 1px solid #e2e8f0; font-weight: bold;">${(p.price * p.stock).toLocaleString()} ${currency}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
     `;
-    printWindow.document.write(html);
-    printWindow.document.close();
-    printWindow.print();
+    onPrint('لیستی کاڵاکان و کۆگا', content);
   };
 
   const startEditing = (p: Product) => {
@@ -179,7 +157,7 @@ export function ProductListView({ products, currency, onPrint, onUpdate, onBack 
     <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-8 pb-20 max-w-7xl mx-auto" dir="rtl">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="flex items-center gap-5">
-          <button onClick={onBack} className="p-4 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 transition-all active:scale-95">
+          <button onClick={onBack} className="p-4 bg-slate-900 hover:bg-slate-800 rounded-2xl shadow-sm border border-white/10 transition-all active:scale-95">
             <ChevronLeft size={24} />
           </button>
           <div>
@@ -306,8 +284,8 @@ export function ProductListView({ products, currency, onPrint, onUpdate, onBack 
                 <div className="space-y-3">
                   <input type="text" value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} placeholder="ناوی کاڵا" className="w-full" />
                   <div className="grid grid-cols-2 gap-3">
-                    <input type="number" value={editForm.price} onChange={e => setEditForm({...editForm, price: parseFloat(e.target.value)})} placeholder="نرخ" className="w-full" />
-                    <input type="number" value={editForm.stock} onChange={e => setEditForm({...editForm, stock: parseFloat(e.target.value)})} placeholder="بڕ" className="w-full" />
+                    <input type="number" value={isNaN(editForm.price ?? NaN) ? '' : editForm.price} onChange={e => setEditForm({...editForm, price: parseFloat(e.target.value)})} placeholder="نرخ" className="w-full" />
+                    <input type="number" value={isNaN(editForm.stock ?? NaN) ? '' : editForm.stock} onChange={e => setEditForm({...editForm, stock: parseFloat(e.target.value)})} placeholder="بڕ" className="w-full" />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <input type="text" value={editForm.unit} onChange={e => setEditForm({...editForm, unit: e.target.value})} placeholder="یەکە" className="w-full" />
@@ -323,46 +301,46 @@ export function ProductListView({ products, currency, onPrint, onUpdate, onBack 
       <AnimatePresence>
         {selectedProductForDetail && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-white dark:bg-slate-900 rounded-[2.5rem] w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl border border-slate-100 dark:border-slate-800">
-              <div className="p-8 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-slate-900 rounded-[2.5rem] w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl border border-white/10">
+              <div className="p-8 border-b border-white/10 flex items-center justify-between">
                 <div>
-                  <h3 className="font-black text-2xl text-slate-800 dark:text-slate-100">{selectedProductForDetail.name}</h3>
+                  <h3 className="font-black text-2xl text-white">{selectedProductForDetail.name}</h3>
                   <p className="text-xs font-bold text-slate-500 mt-1">کۆدی کاڵا: {selectedProductForDetail.barcode}</p>
                 </div>
-                <button onClick={() => setSelectedProductForDetail(null)} className="p-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-2xl text-slate-500 transition-all">
+                <button onClick={() => setSelectedProductForDetail(null)} className="p-3 bg-white/5 hover:bg-white/10 rounded-2xl text-slate-400 transition-all">
                   <X size={20} />
                 </button>
               </div>
               
               <div className="flex-1 overflow-y-auto p-8 space-y-8">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl">
+                  <div className="p-4 bg-white/5 rounded-2xl">
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">بڕی بەردەست</p>
-                    <p className="text-xl font-black">{selectedProductForDetail.stock} {selectedProductForDetail.unit}</p>
+                    <p className="text-xl font-black text-white">{selectedProductForDetail.stock} {selectedProductForDetail.unit}</p>
                   </div>
-                  <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl">
+                  <div className="p-4 bg-white/5 rounded-2xl">
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">کەمترین بڕ</p>
-                    <p className="text-xl font-black">{selectedProductForDetail.minStock} {selectedProductForDetail.unit}</p>
+                    <p className="text-xl font-black text-white">{selectedProductForDetail.minStock} {selectedProductForDetail.unit}</p>
                   </div>
-                  <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl">
+                  <div className="p-4 bg-white/5 rounded-2xl">
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">نرخی کڕین</p>
-                    <p className="text-xl font-black">{selectedProductForDetail.cost.toLocaleString()} {currency}</p>
+                    <p className="text-xl font-black text-white">{selectedProductForDetail.cost.toLocaleString()} {currency}</p>
                   </div>
-                  <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl">
+                  <div className="p-4 bg-white/5 rounded-2xl">
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">نرخی فرۆشتن</p>
                     <p className="text-xl font-black text-emerald-500">{selectedProductForDetail.price.toLocaleString()} {currency}</p>
                   </div>
                 </div>
 
                 <div className="space-y-4">
-                  <h4 className="font-black text-lg flex items-center gap-2">
+                  <h4 className="font-black text-lg flex items-center gap-2 text-white">
                     <TrendingUp size={18} className="text-emerald-500" />
                     زانیاری زیاتر
                   </h4>
-                  <div className="p-6 bg-slate-50 dark:bg-slate-800 rounded-3xl space-y-3">
+                  <div className="p-6 bg-white/5 rounded-3xl space-y-3">
                     <div className="flex justify-between text-sm">
                       <span className="text-slate-500 font-bold">جۆری کاڵا:</span>
-                      <span className="font-black">{selectedProductForDetail.category || 'گشتی'}</span>
+                      <span className="font-black text-white">{selectedProductForDetail.category || 'گشتی'}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-slate-500 font-bold">بەرواری بەسەرچوون:</span>
@@ -375,15 +353,15 @@ export function ProductListView({ products, currency, onPrint, onUpdate, onBack 
                   </div>
                 </div>
 
-                <div className="p-6 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-800 rounded-3xl">
-                  <p className="text-xs font-bold text-amber-700 dark:text-amber-400 leading-relaxed">
+                <div className="p-6 bg-amber-500/10 border border-amber-500/20 rounded-3xl">
+                  <p className="text-xs font-bold text-amber-500 leading-relaxed">
                     تێبینی: بۆ بینینی مێژووی فرۆشتن و وردەکاری زیاتر، دەتوانیت سەردانی بەشی ڕاپۆرتەکان بکەیت و گەڕان بۆ ئەم کاڵایە بکەیت.
                   </p>
                 </div>
               </div>
               
-              <div className="p-8 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/30">
-                <button onClick={() => setSelectedProductForDetail(null)} className="w-full py-4 bg-slate-900 dark:bg-white text-white dark:text-black rounded-2xl font-black text-sm transition-all active:scale-95">
+              <div className="p-8 border-t border-white/10 bg-white/5">
+                <button onClick={() => setSelectedProductForDetail(null)} className="w-full py-4 bg-white text-slate-900 rounded-2xl font-black text-sm transition-all active:scale-95">
                   داخستن
                 </button>
               </div>

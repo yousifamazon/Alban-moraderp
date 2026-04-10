@@ -1,0 +1,165 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: userId
+    // Fields:
+    //   - id: number (required)
+    //   - name: string (required)
+    //   - code: string (required)
+    //   - role: string (required)
+    //   - allowedSections: list (required)
+    //
+    // Collection: products
+    // Document ID: auto-generated
+    // Fields:
+    //   - id: number (required)
+    //   - name: string (required)
+    //   - barcode: string (required)
+    //   - price: number (required)
+    //   - cost: number (required)
+    //   - stock: number (required)
+    //   - unit: string (required)
+    //   - category: string (optional)
+    //   - minStock: number (optional)
+    //   - expiryDate: string (optional)
+    //   - discount: number (optional)
+    //
+    // Collection: sales
+    // Document ID: auto-generated
+    // Fields:
+    //   - id: number (required)
+    //   - customerId: number (optional)
+    //   - customerName: string (optional)
+    //   - date: string (required)
+    //   - items: list (required)
+    //   - total: number (required)
+    //   - paymentMethod: string (required)
+    //   - paidAmount: number (optional)
+    //   - note: string (optional)
+    //   - driverName: string (optional)
+    //
+    // Collection: farmers
+    // Document ID: auto-generated
+    // Fields:
+    //   - id: number (required)
+    //   - name: string (required)
+    //   - phone: string (optional)
+    //   - address: string (optional)
+    //   - totalMilkProvided: number (optional)
+    //   - balance: number (optional)
+    //   - createdAt: string (optional)
+    //
+    // Collection: milkCollections
+    // Document ID: auto-generated
+    // Fields:
+    //   - id: number (required)
+    //   - farmerId: number (required)
+    //   - farmerName: string (optional)
+    //   - amount: number (required)
+    //   - pricePerLiter: number (optional)
+    //   - totalPrice: number (optional)
+    //   - date: string (required)
+    //   - status: string (optional)
+    //   - note: string (optional)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+         (request.auth.token.email == "yusfa886@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /settings/global {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /products/{productId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /sales/{saleId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if isAdmin();
+    }
+
+    match /farmers/{farmerId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated();
+      allow delete: if isAdmin();
+    }
+
+    match /milkCollections/{collectionId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated();
+      allow delete: if isAdmin();
+    }
+
+    match /customers/{id} { allow read, write: if isAuthenticated(); }
+    match /expenses/{id} { allow read, write: if isAuthenticated(); }
+    match /waste/{id} { allow read, write: if isAuthenticated(); }
+    match /payments/{id} { allow read, write: if isAuthenticated(); }
+    match /supplierDebts/{id} { allow read, write: if isAuthenticated(); }
+    match /supplierPayments/{id} { allow read, write: if isAuthenticated(); }
+    match /supplies/{id} { allow read, write: if isAuthenticated(); }
+    match /returns/{id} { allow read, write: if isAuthenticated(); }
+    match /shifts/{id} { allow read, write: if isAuthenticated(); }
+    match /employees/{id} { allow read, write: if isAuthenticated(); }
+    match /salaryPayments/{id} { allow read, write: if isAuthenticated(); }
+    match /purchaseOrders/{id} { allow read, write: if isAuthenticated(); }
+    match /assets/{id} { allow read, write: if isAuthenticated(); }
+    match /recipes/{id} { allow read, write: if isAuthenticated(); }
+    match /productionOrders/{id} { allow read, write: if isAuthenticated(); }
+    match /vehicles/{id} { allow read, write: if isAuthenticated(); }
+    match /projects/{id} { allow read, write: if isAuthenticated(); }
+    match /supportTickets/{id} { allow read, write: if isAuthenticated(); }
+    match /campaigns/{id} { allow read, write: if isAuthenticated(); }
+    match /drivers/{id} { allow read, write: if isAuthenticated(); }
+    match /animals/{id} { allow read, write: if isAuthenticated(); }
+    match /milkingRecords/{id} { allow read, write: if isAuthenticated(); }
+    match /healthRecords/{id} { allow read, write: if isAuthenticated(); }
+    match /feedLogs/{id} { allow read, write: if isAuthenticated(); }
+    match /vaccinationLogs/{id} { allow read, write: if isAuthenticated(); }
+    match /rewardRedemptions/{id} { allow read, write: if isAuthenticated(); }
+    match /alerts/{id} { allow read, write: if isAuthenticated(); }
+
+    match /{path=**} {
+      allow read, write: if false;
+    }
+  }
+}

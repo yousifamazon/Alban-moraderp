@@ -12,7 +12,9 @@ import {
   ChevronLeft, 
   ArrowRight,
   History,
-  Receipt
+  Receipt,
+  FileText,
+  Percent
 } from 'lucide-react';
 
 interface ReportsHubViewProps {
@@ -28,11 +30,13 @@ export function ReportsHubView({ onNavigate, onBack }: ReportsHubViewProps) {
     { id: 'category-report', label: 'فرۆشتنی بەشەکان', icon: <PieChart />, desc: 'فرۆشتنی هەر بەشێک بە جیا' },
     { id: 'expense-report', label: 'ڕاپۆرتی خەرجی', icon: <CreditCard />, desc: 'وردەکاری خەرجییە گشتییەکان' },
     { id: 'qist-dash', label: 'داشبۆردی قەرز', icon: <Users />, desc: 'بەڕێوەبردنی قەرز و قیستەکان' },
-    { id: 'cash-rep', label: 'ڕاپۆرتی کاش', icon: <DollarSign />, desc: 'جوڵەی پارەی کاش لە سندوقدا' },
+    { id: 'cash-rep', label: 'ڕاپۆرتی پارە', icon: <DollarSign />, desc: 'جوڵەی پارەی کاش لە سندوقدا' },
+    { id: 'cust-statement', label: 'کەشفی حیساب', icon: <FileText />, desc: 'کەشفی حیسابی وردی کڕیاران' },
     { id: 'low-stock', label: 'کاڵای کەمبوو', icon: <Bell />, desc: 'لیستی ئەو کاڵانەی بڕیان کەمە' },
     { id: 'expired', label: 'بەسەرچووەکان', icon: <Calendar />, desc: 'کاڵاکان کە بەرواریان بەسەرچووە' },
-    { id: 'emp-perf-report', label: 'کارایی کارمەند', icon: <UserCheck />, desc: 'فرۆشتن و چالاکی هەر کارمەندێک' },
+    { id: 'discounts', label: 'ڕاپۆرتی داشکان', icon: <Percent />, desc: 'بینینی هەموو ئەو داشکانانەی کراون' },
     { id: 'driver-report', label: 'ڕاپۆرتی شۆفێرەکان', icon: <Users />, desc: 'پوختەی فرۆشتن بەپێی شۆفێر' },
+    { id: 'emp-perf-report', label: 'کارایی کارمەند', icon: <UserCheck />, desc: 'فرۆشتن و چالاکی هەر کارمەندێک' },
   ];
 
   return (

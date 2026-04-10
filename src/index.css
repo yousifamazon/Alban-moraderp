@@ -1,5 +1,5 @@
-@import "tailwindcss";
 @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100;300;400;500;700;900&family=JetBrains+Mono:wght@400;700&display=swap');
+@import "tailwindcss";
 
 @theme {
   --font-sans: "Vazirmatn", ui-sans-serif, system-ui, sans-serif;
@@ -34,10 +34,6 @@ body {
   color: var(--text-color);
 }
 
-input, select, textarea {
-  @apply bg-black border-white/10 text-white placeholder:text-white/20 rounded-xl focus:border-white/40 focus:ring-0 transition-all;
-}
-
 /* Global utility classes for the strict theme */
 .theme-bg { background-color: var(--bg-color); }
 .theme-text { color: var(--text-color); }
@@ -53,19 +49,6 @@ input, select, textarea {
 
 .sidebar-active-indicator {
   background-color: #FFFFFF !important;
-}
-
-/* Overriding common Tailwind classes to enforce the theme */
-.bg-white, .bg-slate-50, .bg-slate-100, .bg-slate-200, .bg-slate-900, .bg-slate-800, .bg-slate-700 {
-  background-color: #000000 !important;
-}
-
-.text-slate-900, .text-slate-800, .text-slate-700, .text-slate-600, .text-slate-500, .text-slate-400 {
-  color: #FFFFFF !important;
-}
-
-.border-slate-100, .border-slate-200, .border-slate-300, .border-slate-700, .border-slate-800 {
-  border-color: rgba(255, 255, 255, 0.1) !important;
 }
 
 /* Smooth transitions for all theme-related properties */

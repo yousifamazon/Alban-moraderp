@@ -1,0 +1,108 @@
+{
+  "entities": {
+    "products": {
+      "title": "Product",
+      "description": "Inventory items",
+      "type": "object",
+      "properties": {
+        "id": { "type": "number" },
+        "name": { "type": "string" },
+        "barcode": { "type": "string" },
+        "price": { "type": "number" },
+        "cost": { "type": "number" },
+        "stock": { "type": "number" },
+        "unit": { "type": "string" },
+        "category": { "type": "string" },
+        "minStock": { "type": "number" },
+        "expiryDate": { "type": "string" },
+        "discount": { "type": "number" }
+      },
+      "required": ["id", "name", "barcode", "price", "cost", "stock", "unit"]
+    },
+    "sales": {
+      "title": "Sale",
+      "description": "Sales transactions",
+      "type": "object",
+      "properties": {
+        "id": { "type": "number" },
+        "customerId": { "type": "number" },
+        "customerName": { "type": "string" },
+        "date": { "type": "string" },
+        "items": { "type": "array" },
+        "total": { "type": "number" },
+        "paymentMethod": { "type": "string" },
+        "paidAmount": { "type": "number" },
+        "note": { "type": "string" },
+        "driverName": { "type": "string" }
+      },
+      "required": ["id", "date", "items", "total", "paymentMethod"]
+    },
+    "farmers": {
+      "title": "Farmer",
+      "description": "Milk suppliers",
+      "type": "object",
+      "properties": {
+        "id": { "type": "number" },
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "address": { "type": "string" },
+        "totalMilkProvided": { "type": "number" },
+        "balance": { "type": "number" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "name"]
+    },
+    "milkCollections": {
+      "title": "Milk Collection",
+      "description": "Daily milk collection records",
+      "type": "object",
+      "properties": {
+        "id": { "type": "number" },
+        "farmerId": { "type": "number" },
+        "farmerName": { "type": "string" },
+        "amount": { "type": "number" },
+        "pricePerLiter": { "type": "number" },
+        "totalPrice": { "type": "number" },
+        "date": { "type": "string" },
+        "status": { "type": "string" },
+        "note": { "type": "string" }
+      },
+      "required": ["id", "farmerId", "amount", "date"]
+    },
+    "users": {
+      "title": "User",
+      "description": "System users",
+      "type": "object",
+      "properties": {
+        "id": { "type": "number" },
+        "name": { "type": "string" },
+        "code": { "type": "string" },
+        "role": { "type": "string" },
+        "allowedSections": { "type": "array" }
+      },
+      "required": ["id", "name", "code", "role"]
+    }
+  },
+  "firestore": {
+    "products": {
+      "schema": "products",
+      "description": "Collection of products"
+    },
+    "sales": {
+      "schema": "sales",
+      "description": "Collection of sales"
+    },
+    "farmers": {
+      "schema": "farmers",
+      "description": "Collection of farmers"
+    },
+    "milkCollections": {
+      "schema": "milkCollections",
+      "description": "Collection of milk collections"
+    },
+    "users": {
+      "schema": "users",
+      "description": "Collection of users"
+    }
+  }
+}

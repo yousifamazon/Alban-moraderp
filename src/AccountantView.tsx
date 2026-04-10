@@ -46,7 +46,7 @@ export function AccountantView({
       <div className="flex gap-4 mb-8 border-b theme-border pb-4">
         <button 
           onClick={() => setActiveTab('drivers')}
-          className={`px-6 py-3 rounded-xl font-black text-sm transition-all flex items-center gap-2 ${activeTab === 'drivers' ? 'bg-current text-inherit' : 'bg-current/5 text-inherit opacity-60 hover:opacity-100 hover:bg-white hover:text-slate-900 dark:hover:bg-white dark:hover:text-slate-900'}`}
+          className={`px-6 py-3 rounded-xl font-black text-sm transition-all flex items-center gap-2 ${activeTab === 'drivers' ? 'bg-white text-slate-900 shadow-xl shadow-white/10' : 'bg-white/5 text-white opacity-60 hover:opacity-100 hover:bg-white/10'}`}
         >
           <Truck size={18} />
           داواکاری شۆفێران
@@ -54,7 +54,7 @@ export function AccountantView({
         </button>
         <button 
           onClick={() => setActiveTab('shops')}
-          className={`px-6 py-3 rounded-xl font-black text-sm transition-all flex items-center gap-2 ${activeTab === 'shops' ? 'bg-current text-inherit' : 'bg-current/5 text-inherit opacity-60 hover:opacity-100 hover:bg-white hover:text-slate-900 dark:hover:bg-white dark:hover:text-slate-900'}`}
+          className={`px-6 py-3 rounded-xl font-black text-sm transition-all flex items-center gap-2 ${activeTab === 'shops' ? 'bg-white text-slate-900 shadow-xl shadow-white/10' : 'bg-white/5 text-white opacity-60 hover:opacity-100 hover:bg-white/10'}`}
         >
           <ShoppingCart size={18} />
           داواکاری دوکانەکان

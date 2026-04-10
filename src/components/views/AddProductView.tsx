@@ -1,18 +1,19 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronLeft, PackageOpen, Barcode } from 'lucide-react';
-import { Product } from '../../types';
+import { ChevronLeft, PackageOpen, Barcode, Plus } from 'lucide-react';
+import { Product, CustomField } from '../../types';
 
 interface AddProductViewProps {
   products: Product[];
   categories: string[];
   currency: string;
+  customFields?: CustomField[];
   onSave: (p: Product) => void;
   onBack: () => void;
 }
 
-export function AddProductView({ products, categories, currency, onSave, onBack }: AddProductViewProps) {
-  const [form, setForm] = useState({
+export function AddProductView({ products, categories, currency, customFields = [], onSave, onBack }: AddProductViewProps) {
+  const [form, setForm] = useState<Record<string, any>>({
     name: '',
     barcode: '',
     category: categories[0] || 'گشتی',
@@ -28,7 +29,8 @@ export function AddProductView({ products, categories, currency, onSave, onBack 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name || !form.price) return;
-    onSave({
+    
+    const newProduct: Product = {
       id: Date.now(),
       name: form.name,
       barcode: form.barcode || Math.floor(Math.random() * 1000000000).toString(),
@@ -39,10 +41,15 @@ export function AddProductView({ products, categories, currency, onSave, onBack 
       minStock: parseFloat(form.minStock) || 5,
       expiryDate: form.expiryDate,
       discount: parseFloat(form.discount) || 0,
-      unit: form.unit || 'دانە'
-    });
+      unit: form.unit || 'دانە',
+      ...form // Include custom fields
+    };
+    
+    onSave(newProduct);
     onBack();
   };
+
+  const productCustomFields = customFields.filter(f => f.entity === 'product' && f.isVisible);
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="pb-24 max-w-5xl mx-auto">
@@ -108,6 +115,48 @@ export function AddProductView({ products, categories, currency, onSave, onBack 
               </div>
             </div>
           </div>
+
+          {/* Custom Fields Section */}
+          {productCustomFields.length > 0 && (
+            <div className="pro-card p-8 border-none bg-current/5 space-y-6 rounded-3xl">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="p-2 bg-purple-500/10 text-purple-500 rounded-xl">
+                  <Plus size={20} />
+                </div>
+                <h3 className="font-black text-lg">زانیاری زیادە</h3>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {productCustomFields.map(field => (
+                  <div key={field.id} className="space-y-2">
+                    <label className="text-[10px] font-black theme-muted uppercase tracking-widest px-1">
+                      {field.label} {field.required && <span className="text-red-500">*</span>}
+                    </label>
+                    {field.type === 'select' ? (
+                      <select 
+                        required={field.required}
+                        value={form[field.id] || ''}
+                        onChange={e => setForm({...form, [field.id]: e.target.value})}
+                        className="w-full p-4 bg-current/5 border-none rounded-2xl outline-none font-bold text-sm focus:ring-2 ring-current/20 transition-all"
+                      >
+                        <option value="">هەڵبژێرە...</option>
+                        {field.options?.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                      </select>
+                    ) : (
+                      <input 
+                        type={field.type} 
+                        required={field.required}
+                        value={form[field.id] || ''} 
+                        onChange={e => setForm({...form, [field.id]: e.target.value})} 
+                        className="w-full p-4 bg-current/5 border-none rounded-2xl outline-none font-bold text-sm focus:ring-2 ring-current/20 transition-all" 
+                        placeholder={field.label}
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Inventory Section */}
           <div className="pro-card p-8 border-none bg-current/5 space-y-6 rounded-3xl">
@@ -243,3 +292,5 @@ export function AddProductView({ products, categories, currency, onSave, onBack 
     </motion.div>
   );
 }
+
+

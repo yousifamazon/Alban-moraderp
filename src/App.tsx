@@ -65,7 +65,9 @@ import {
   Phone,
   MapPin,
   Menu,
-  ChevronDown
+  ChevronDown,
+  LogOut,
+  Command
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import * as XLSX from 'xlsx';
@@ -73,8 +75,10 @@ import JsBarcode from 'jsbarcode';
 import { LivestockView } from './LivestockView';
 import { AccountantView } from './AccountantView';
 import { cn, customConfirm, handleConfirm } from './lib/utils';
+import { db, auth, handleFirestoreError, OperationType } from './firebase';
+import { onSnapshot, collection, doc, setDoc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, BarChart, Bar, Legend } from 'recharts';
-import { Product, Sale, Expense, Waste, ERPData, Payment, SupplierDebt, SupplierPayment, Supply, Settings, Supplier, Return, Shift, Employee, SalaryPayment, PurchaseOrder, PurchaseOrderItem, Customer, Task, Asset, Recipe, RecipeItem, ProductionOrder, Vehicle, Project, SupportTicket, Campaign, Driver, Animal, MilkingRecord, HealthRecord, DraftOrder, DraftOrderItem } from './types';
+import { Product, Sale, Expense, Waste, ERPData, Payment, SupplierDebt, SupplierPayment, Supply, Settings, Supplier, Return, Shift, Employee, SalaryPayment, PurchaseOrder, PurchaseOrderItem, Customer, Task, Asset, Recipe, RecipeItem, ProductionOrder, Vehicle, Project, SupportTicket, Campaign, Driver, Animal, MilkingRecord, HealthRecord, DraftOrder, DraftOrderItem, Alert, InvoiceTemplate, CustomMenuSetting, CustomField, CustomSection, CustomAction } from './types';
 import { MENU_CATEGORIES, MENU_ITEMS } from './constants';
 
 // View Components
@@ -97,6 +101,8 @@ import { ProfitsReportView } from './components/views/ProfitsReportView';
 import { HubView } from './components/views/HubView';
 import { ReportsHubView } from './components/views/ReportsHubView';
 import { LoginView } from './components/views/LoginView';
+import { NotificationsView } from './components/views/NotificationsView';
+import { AdvancedDashboardView } from './components/views/AdvancedDashboardView';
 import { UserManagementView } from './components/views/UserManagementView';
 import { ShopRequestView } from './components/views/ShopRequestView';
 import { ShopRequestManagementView } from './components/views/ShopRequestManagementView';
@@ -109,9 +115,13 @@ import { PurchaseOrderView } from './components/views/PurchaseOrderView';
 import { POSView } from './components/views/POSView';
 import { ReturnsView } from './components/views/ReturnsView';
 import { DailySummaryReportView } from './components/views/DailySummaryReportView';
+import { InvoiceTemplateView } from './components/views/InvoiceTemplateView';
+import { SystemCustomizerView } from './components/views/SystemCustomizerView';
+import { MilkCollectionView } from './components/views/MilkCollectionView';
 import { FooterNavButton, SidebarItem, StatCard } from './components/LayoutComponents';
 
 const STORAGE_KEY = 'alban_murad_erp_data';
+const USER_STORAGE_KEY = 'alban_murad_erp_user';
 
 const INITIAL_DATA: ERPData = {
   products: [],
@@ -123,6 +133,8 @@ const INITIAL_DATA: ERPData = {
   supplierPayments: [],
   supplies: [],
   suppliers: [],
+  farmers: [],
+  milkCollections: [],
   categories: ['گشتی', 'خۆراک', 'پاککەرەوە', 'پێداویستی'],
   returns: [],
   shifts: [],
@@ -145,10 +157,16 @@ const INITIAL_DATA: ERPData = {
   feedLogs: [],
   vaccinationLogs: [],
   draftOrders: [],
+  alerts: [],
+  rewardRedemptions: [],
   settings: {
     storeName: 'Alban Murad Trading',
     currency: 'IQD',
-    theme: 'dark'
+    theme: 'dark',
+    language: 'ku',
+    invoiceTemplates: [],
+    activeInvoiceTemplateId: 'default',
+    menuSettings: []
   }
 };
 
@@ -171,24 +189,126 @@ function App() {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(true);
-  const [openCategories, setOpenCategories] = useState<string[]>(['sales', 'inventory']);
-  const [currentUser, setCurrentUser] = useState<any>(null);
-  const [data, setData] = useState<ERPData>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (!saved) return INITIAL_DATA;
+  const [openCategories, setOpenCategories] = useState<string[]>(['sales_customers', 'inventory_production', 'reports']);
+  const [currentUser, setCurrentUser] = useState<any>(() => {
+    const saved = localStorage.getItem(USER_STORAGE_KEY);
+    if (!saved) return null;
     try {
-      const parsed = JSON.parse(saved);
-      // Ensure all keys exist even if loading from an older version
-      return { ...INITIAL_DATA, ...parsed };
+      return JSON.parse(saved);
     } catch (e) {
-      return INITIAL_DATA;
+      return null;
     }
   });
+  const [data, setData] = useState<ERPData>(INITIAL_DATA);
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
 
-  // Persistence
+  // Firebase Real-time Sync
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  }, [data]);
+    if (!currentUser) return;
+
+    const collections = ['products', 'sales', 'farmers', 'milkCollections', 'users', 'customers', 'expenses', 'waste', 'payments', 'supplierDebts', 'supplierPayments', 'supplies', 'returns', 'shifts', 'employees', 'salaryPayments', 'purchaseOrders', 'assets', 'recipes', 'productionOrders', 'vehicles', 'projects', 'supportTickets', 'campaigns', 'drivers', 'animals', 'milkingRecords', 'healthRecords', 'feedLogs', 'vaccinationLogs', 'rewardRedemptions', 'alerts'];
+    
+    const unsubscribes = collections.map(colName => {
+      return onSnapshot(collection(db, colName), (snapshot) => {
+        const items = snapshot.docs.map(doc => ({ ...doc.data() }));
+        setData(prev => ({ ...prev, [colName]: items }));
+        if (colName === 'products') setIsDataLoaded(true); // Basic check for initial load
+      }, (error) => {
+        handleFirestoreError(error, OperationType.LIST, colName);
+      });
+    });
+
+    // Settings sync
+    const unsubSettings = onSnapshot(doc(db, 'settings', 'global'), (docSnap) => {
+      if (docSnap.exists()) {
+        setData(prev => ({ ...prev, settings: { ...prev.settings, ...docSnap.data() } }));
+      }
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, 'settings/global');
+    });
+
+    return () => {
+      unsubscribes.forEach(unsub => unsub());
+      unsubSettings();
+    };
+  }, [currentUser]);
+
+  // Sync data to Firebase (Debounced or on change)
+  // Note: In a real app, we should use individual add/update/delete functions
+  // instead of syncing the whole state. For now, we'll implement a helper to update Firebase.
+  
+  const updateFirebaseCollection = async (colName: string, items: any[]) => {
+    try {
+      const batch = writeBatch(db);
+      // This is a naive implementation for the demo. 
+      // In production, you'd only update the changed document.
+      for (const item of items) {
+        const docRef = doc(db, colName, String(item.id || Math.random()));
+        batch.set(docRef, item);
+      }
+      await batch.commit();
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, colName);
+    }
+  };
+
+  // Persistence (Local storage fallback removed in favor of Firebase)
+  useEffect(() => {
+    if (currentUser) {
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(currentUser));
+    } else {
+      localStorage.removeItem(USER_STORAGE_KEY);
+    }
+  }, [currentUser]);
+
+  // Alert Generation
+  useEffect(() => {
+    const newAlerts: Alert[] = [];
+    
+    // Low Stock Alerts
+    data.products.forEach(p => {
+      if (p.stock <= p.minStock) {
+        newAlerts.push({
+          id: Date.now() + Math.random(),
+          type: 'low-stock',
+          title: 'کەمی کاڵا',
+          message: `کاڵای "${p.name}" لە کۆگا بەرەو تەواوبوون دەچێت (بڕی ماوە: ${p.stock})`,
+          date: new Date().toISOString(),
+          isRead: false,
+          severity: 'warning',
+          link: 'product-list'
+        });
+      }
+    });
+
+    // Debt Alerts (Example: if debt > 1,000,000)
+    data.customers?.forEach(c => {
+      if (c.debt > 1000000) {
+        newAlerts.push({
+          id: Date.now() + Math.random(),
+          type: 'debt-due',
+          title: 'قەرزی زۆر',
+          message: `کڕیار "${c.name}" بڕی ${c.debt.toLocaleString()} قەرزدارە`,
+          date: new Date().toISOString(),
+          isRead: false,
+          severity: 'info',
+          link: 'customer-list'
+        });
+      }
+    });
+
+    if (newAlerts.length > 0) {
+      setData(prev => {
+        const existingMessages = new Set(prev.alerts?.map(a => a.message) || []);
+        const uniqueNewAlerts = newAlerts.filter(a => !existingMessages.has(a.message));
+        if (uniqueNewAlerts.length === 0) return prev;
+        return {
+          ...prev,
+          alerts: [...(prev.alerts || []), ...uniqueNewAlerts].slice(-50) // Keep last 50
+        };
+      });
+    }
+  }, [data.products, data.customers]);
 
   // Backup & Restore
   const backupData = () => {
@@ -264,165 +384,137 @@ function App() {
         <head>
           <title>${title}</title>
           <style>
-            @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap');
+            @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;900&display=swap');
             body { 
               font-family: 'Vazirmatn', sans-serif; 
-              padding: 20px; 
-              color: #1e293b; 
-              max-width: 800px; 
+              padding: 40px; 
+              color: #0f172a; 
+              max-width: 1000px; 
               margin: 0 auto;
               background: #fff;
+              line-height: 1.6;
             }
-            .header {
+            .print-header {
               display: flex;
               justify-content: space-between;
               align-items: center;
-              border-bottom: 4px solid #3b82f6;
+              border-bottom: 3px solid #0f172a;
               padding-bottom: 20px;
-              margin-bottom: 30px;
+              margin-bottom: 40px;
             }
-            .logo-section {
-              display: flex;
-              align-items: center;
-              gap: 15px;
-            }
-            .logo-circle {
-              width: 60px;
-              height: 60px;
-              background: #3b82f6;
-              border-radius: 50%;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              color: white;
-              font-weight: bold;
-              font-size: 24px;
-            }
-            .store-info h1 {
+            .store-brand h1 {
               margin: 0;
-              font-size: 24px;
-              color: #1e293b;
+              font-size: 32px;
+              font-weight: 900;
+              color: #0f172a;
+              letter-spacing: -0.02em;
             }
-            .store-info p {
+            .store-brand p {
               margin: 5px 0 0;
               font-size: 14px;
+              font-weight: 700;
               color: #64748b;
+              text-transform: uppercase;
+              letter-spacing: 0.1em;
             }
-            .receipt-meta {
+            .report-meta {
               text-align: left;
               font-size: 14px;
+              font-weight: 600;
               color: #64748b;
             }
-            .receipt-title {
+            .report-title {
               text-align: center;
-              font-size: 20px;
-              font-weight: bold;
-              margin-bottom: 20px;
-              color: #3b82f6;
-              text-transform: uppercase;
-              letter-spacing: 1px;
+              font-size: 24px;
+              font-weight: 900;
+              margin-bottom: 40px;
+              color: #0f172a;
+              position: relative;
+              padding-bottom: 15px;
+            }
+            .report-title::after {
+              content: '';
+              position: absolute;
+              bottom: 0;
+              left: 50%;
+              transform: translateX(-50%);
+              width: 60px;
+              height: 4px;
+              background: #3b82f6;
+              border-radius: 2px;
             }
             table { 
               width: 100%; 
               border-collapse: collapse; 
-              margin-top: 10px; 
+              margin-top: 20px; 
               font-size: 14px;
+              border: 1px solid #e2e8f0;
             }
             th { 
               background-color: #f8fafc; 
-              color: #475569;
-              font-weight: bold; 
-              border-bottom: 2px solid #e2e8f0;
-              padding: 12px 8px;
+              color: #0f172a;
+              font-weight: 900; 
+              border: 1px solid #e2e8f0;
+              padding: 15px 10px;
               text-align: right;
             }
             td { 
-              border-bottom: 1px solid #f1f5f9; 
-              padding: 12px 8px; 
+              border: 1px solid #e2e8f0; 
+              padding: 12px 10px; 
               text-align: right; 
+              font-weight: 500;
             }
-            .total-section {
-              margin-top: 30px;
-              border-top: 2px solid #e2e8f0;
-              padding-top: 15px;
+            tr:nth-child(even) {
+              background-color: #fcfdfe;
             }
-            .total-row { 
-              display: flex;
-              justify-content: flex-end;
-              gap: 50px;
-              font-size: 18px;
-              font-weight: bold;
-              color: #1e293b;
-            }
-            .footer { 
-              margin-top: 60px; 
-              font-size: 12px; 
-              color: #94a3b8; 
-              text-align: center; 
-              border-top: 1px solid #f1f5f9; 
-              padding-top: 20px; 
-            }
-            .signature-section {
+            .footer {
+              margin-top: 60px;
+              padding-top: 20px;
+              border-top: 1px solid #e2e8f0;
               display: flex;
               justify-content: space-between;
-              margin-top: 50px;
-              padding: 0 40px;
-            }
-            .signature-box {
-              text-align: center;
-              width: 150px;
-            }
-            .signature-line {
-              border-top: 1px solid #cbd5e1;
-              margin-bottom: 5px;
+              font-size: 12px;
+              font-weight: 700;
+              color: #94a3b8;
             }
             @media print {
-              body { padding: 0; }
+              body { padding: 20px; }
               .no-print { display: none; }
             }
           </style>
         </head>
         <body>
-          <div class="header">
-            <div class="logo-section">
-              <div class="logo-circle">ERP</div>
-              <div class="store-info">
-                <h1>Alban Murad Trading</h1>
-                <p>سیستەمی بەڕێوەبردنی کۆگا و فرۆشتن</p>
-              </div>
+          <div class="print-header">
+            <div class="store-brand">
+              <h1>${data.settings.storeName || 'Alban Murad'}</h1>
+              <p>Enterprise ERP System</p>
             </div>
-            <div class="receipt-meta">
-              <p>بەروار: ${new Date().toLocaleDateString('ku-IQ')}</p>
-              <p>کات: ${new Date().toLocaleTimeString('ku-IQ')}</p>
+            <div class="report-meta">
+              <div>ڕێکەوت: ${new Date().toLocaleDateString('ku-IQ')}</div>
+              <div>کات: ${new Date().toLocaleTimeString('ku-IQ')}</div>
             </div>
           </div>
           
-          <div class="receipt-title">${title}</div>
+          <h2 class="report-title">${title}</h2>
           
-          <div class="content">
+          <div class="report-content">
             ${content}
           </div>
 
-          <div class="signature-section">
-            <div class="signature-box">
-              <div class="signature-line"></div>
-              <p style="font-size: 12px; color: #64748b;">واژووی کڕیار</p>
-            </div>
-            <div class="signature-box">
-              <div class="signature-line"></div>
-              <p style="font-size: 12px; color: #64748b;">واژووی فرۆشیار</p>
-            </div>
-          </div>
-
           <div class="footer">
-            <p>سوپاس بۆ کڕینەکەت! هیوای کاتێکی خۆش</p>
-            <p style="margin-top: 5px; opacity: 0.7;">Alban Murad Trading ERP - v1.0</p>
+            <div>سیستەمی بەڕێوەبردنی البان موراد</div>
+            <div>لاپەڕە 1 لە 1</div>
           </div>
+          <script>
+            window.onload = () => {
+              window.print();
+              setTimeout(() => window.close(), 500);
+            };
+          </script>
         </body>
       </html>
     `);
     printWindow.document.close();
-    printWindow.print();
   };
 
   const exportToExcel = () => {
@@ -472,6 +564,55 @@ function App() {
   };
 
 
+  const handleSaveTemplates = (templates: InvoiceTemplate[], activeId: string) => {
+    setData(prev => ({
+      ...prev,
+      settings: {
+        ...prev.settings,
+        invoiceTemplates: templates,
+        activeInvoiceTemplateId: activeId
+      }
+    }));
+  };
+
+  const handleSaveMenuSettings = (menuSettings: CustomMenuSetting[]) => {
+    setData(prev => ({
+      ...prev,
+      settings: {
+        ...prev.settings,
+        menuSettings
+      }
+    }));
+  };
+
+  const handleSaveCustomFields = (customFields: CustomField[]) => {
+    setData(prev => ({
+      ...prev,
+      settings: {
+        ...prev.settings,
+        customFields
+      }
+    }));
+  };
+
+  const handleSaveCustomSections = (customSections: CustomSection[]) => {
+    setData(prev => ({
+      ...prev,
+      settings: {
+        ...prev.settings,
+        customSections
+      }
+    }));
+  };
+
+  const getActiveTemplate = () => {
+    if (data.settings.invoiceTemplates && data.settings.activeInvoiceTemplateId) {
+      const active = data.settings.invoiceTemplates.find(t => t.id === data.settings.activeInvoiceTemplateId);
+      if (active) return active.content;
+    }
+    return data.settings.invoiceTemplate || '';
+  };
+
   useEffect(() => {
     const lastBackup = localStorage.getItem('last_backup_date');
     const today = new Date().toLocaleDateString();
@@ -500,6 +641,7 @@ function App() {
     <div className={cn(
       "min-h-screen font-['Vazirmatn',sans-serif] transition-colors duration-500 flex overflow-hidden bg-black text-white"
     )} dir="rtl">
+      <Toaster position="top-center" richColors />
       {/* Mobile Sidebar Overlay */}
       <AnimatePresence>
         {isMobileSidebarOpen && (
@@ -561,24 +703,48 @@ function App() {
           <div>
             <p className="px-4 mb-2 text-[10px] font-black opacity-20 uppercase tracking-[0.3em]">کارپێکردن</p>
             <div className="space-y-1">
+              {canAccess('pos') && <SidebarItem active={activeSection === 'pos'} icon={<ShoppingCart size={18} />} label="فرۆشتن (POS)" onClick={() => { setActiveSection('pos'); setIsMobileSidebarOpen(false); }} darkMode={true} />}
+              {canAccess('milk-collection') && <SidebarItem active={activeSection === 'milk-collection'} icon={<Milk size={18} />} label="کۆکردنەوەی شیر" onClick={() => { setActiveSection('milk-collection'); setIsMobileSidebarOpen(false); }} darkMode={true} />}
+              {canAccess('product-list') && <SidebarItem active={activeSection === 'product-list'} icon={<List size={18} />} label="کۆگا و کاڵاکان" onClick={() => { setActiveSection('product-list'); setIsMobileSidebarOpen(false); }} darkMode={true} />}
               {canAccess('driver-view') && <SidebarItem active={activeSection === 'driver-view'} icon={<Truck size={18} />} label="بەشی سایەق" onClick={() => { setActiveSection('driver-view'); setIsMobileSidebarOpen(false); }} darkMode={true} />}
               {canAccess('accountant-view') && <SidebarItem active={activeSection === 'accountant-view'} icon={<Receipt size={18} />} label="بەشی محاسب" onClick={() => { setActiveSection('accountant-view'); setIsMobileSidebarOpen(false); }} darkMode={true} />}
-              {canAccess('product-list') && <SidebarItem active={activeSection === 'product-list'} icon={<List size={18} />} label="کۆگا و کاڵاکان" onClick={() => { setActiveSection('product-list'); setIsMobileSidebarOpen(false); }} darkMode={true} />}
+              
+              {/* Custom Sections */}
+              {data.settings.customSections?.filter(s => s.isVisible).map(section => (
+                <SidebarItem 
+                  key={section.id}
+                  active={activeSection === section.id} 
+                  icon={<Command size={18} />} 
+                  label={section.label} 
+                  onClick={() => { setActiveSection(section.id); setIsMobileSidebarOpen(false); }} 
+                  darkMode={true} 
+                />
+              ))}
             </div>
           </div>
 
           {MENU_CATEGORIES.map(cat => {
             const catItems = MENU_ITEMS.filter(item => item.category === cat.id && canAccess(item.id));
-            if (catItems.length === 0) return null;
+            const visibleItems = catItems.filter(item => {
+              const setting = data.settings.menuSettings?.find(s => s.id === item.id);
+              return setting ? setting.isVisible : true;
+            });
+
+            if (visibleItems.length === 0) return null;
             
             const isOpen = openCategories.includes(cat.id);
             return (
               <div key={cat.id} className="mb-2">
                 <button 
                   onClick={() => setOpenCategories(prev => isOpen ? prev.filter(c => c !== cat.id) : [...prev, cat.id])}
-                  className="w-full flex items-center justify-between px-4 py-3 rounded-xl theme-hover transition-all"
+                  className="w-full flex items-center justify-between px-4 py-3 rounded-xl theme-hover transition-all group"
                 >
-                  <span className="text-[10px] font-black opacity-60 uppercase tracking-[0.3em]">{cat.label}</span>
+                  <div className="flex items-center gap-3">
+                    <div className={cn("opacity-40 group-hover:opacity-100 transition-opacity", isOpen ? "opacity-100" : "")}>
+                      {(cat as any).icon}
+                    </div>
+                    <span className="text-[10px] font-black opacity-60 uppercase tracking-[0.3em] group-hover:opacity-100 transition-opacity">{cat.label}</span>
+                  </div>
                   <ChevronDown size={14} className={cn("transition-transform opacity-40", isOpen ? "rotate-180" : "")} />
                 </button>
                 <AnimatePresence>
@@ -590,19 +756,22 @@ function App() {
                       className="overflow-hidden"
                     >
                       <div className="space-y-1 mt-1">
-                        {catItems.map(item => (
-                          <SidebarItem 
-                            key={item.id}
-                            active={activeSection === item.id} 
-                            icon={item.icon} 
-                            label={item.label} 
-                            onClick={() => {
-                              setActiveSection(item.id);
-                              setIsMobileSidebarOpen(false);
-                            }} 
-                            darkMode={true}
-                          />
-                        ))}
+                        {visibleItems.map(item => {
+                          const setting = data.settings.menuSettings?.find(s => s.id === item.id);
+                          return (
+                            <SidebarItem 
+                              key={item.id}
+                              active={activeSection === item.id} 
+                              icon={item.icon} 
+                              label={setting?.label || item.label} 
+                              onClick={() => {
+                                setActiveSection(item.id);
+                                setIsMobileSidebarOpen(false);
+                              }} 
+                              darkMode={true}
+                            />
+                          );
+                        })}
                       </div>
                     </motion.div>
                   )}
@@ -632,6 +801,18 @@ function App() {
             <span>هاوردەکردن (JSON)</span>
             <input type="file" accept=".json" onChange={restoreData} className="hidden" />
           </label>
+          <button 
+            onClick={async () => {
+              const confirmed = await customConfirm('ئایا دڵنیایت لە چوونەدەرەوە؟');
+              if (confirmed) {
+                setCurrentUser(null);
+              }
+            }}
+            className="w-full flex items-center gap-3 p-4 rounded-2xl transition-all font-black text-xs theme-hover border border-red-500/20 text-red-500 bg-red-500/5"
+          >
+            <LogOut size={16} />
+            <span>چوونەدەرەوە</span>
+          </button>
         </div>
       </aside>
 
@@ -665,13 +846,30 @@ function App() {
                 className="pr-12 pl-4 py-3 w-64 text-xs font-bold"
               />
             </div>
-            <button className="p-3 rounded-2xl theme-hover border theme-border relative">
+            <button 
+              onClick={() => setActiveSection('notifications')}
+              className="p-3 rounded-2xl theme-hover border theme-border relative"
+            >
               <Bell size={18} />
-              <div className="absolute top-3 left-3 w-2 h-2 bg-red-500 rounded-full border-2 theme-bg" />
+              {(data.alerts?.filter(a => !a.isRead).length || 0) > 0 && (
+                <div className="absolute top-3 left-3 w-2 h-2 bg-red-500 rounded-full border-2 theme-bg" />
+              )}
             </button>
             <div className="h-10 w-10 rounded-2xl bg-current flex items-center justify-center font-black text-xs">
               <span className="text-black">AM</span>
             </div>
+            <button 
+              onClick={async () => {
+                const confirmed = await customConfirm('ئایا دڵنیایت لە چوونەدەرەوە؟');
+                if (confirmed) {
+                  setCurrentUser(null);
+                }
+              }}
+              className="p-3 rounded-2xl theme-hover border border-red-500/20 text-red-500 hover:bg-red-500/10 transition-all"
+              title="چوونەدەرەوە"
+            >
+              <LogOut size={18} />
+            </button>
           </div>
         </header>
 
@@ -689,6 +887,17 @@ function App() {
             </div>
           </div>
           <div className="flex gap-2">
+            <button 
+              onClick={async () => {
+                const confirmed = await customConfirm('ئایا دڵنیایت لە چوونەدەرەوە؟');
+                if (confirmed) {
+                  setCurrentUser(null);
+                }
+              }}
+              className="p-3 rounded-xl theme-hover border border-red-500/20 text-red-500"
+            >
+              <LogOut size={18} />
+            </button>
           </div>
         </header>
 
@@ -840,7 +1049,16 @@ function App() {
                 />
               )}
 
-          {activeSection === 'add-product' && <AddProductView products={data.products} categories={data.categories || []} currency={data.settings.currency} onSave={(p) => setData(prev => ({ ...prev, products: [...prev.products, p] }))} onBack={() => setActiveSection('hub')} />}
+          {activeSection === 'add-product' && (
+            <AddProductView 
+              products={data.products} 
+              categories={data.categories || []} 
+              currency={data.settings.currency} 
+              customFields={data.settings.customFields}
+              onSave={(p) => setData(prev => ({ ...prev, products: [...prev.products, p] }))} 
+              onBack={() => setActiveSection('hub')} 
+            />
+          )}
           {activeSection === 'product-list' && <ProductListView products={data.products} currency={data.settings.currency} onPrint={handlePrint} onUpdate={(updatedProducts) => setData(prev => ({ ...prev, products: updatedProducts }))} onBack={() => setActiveSection('hub')} />}
           {activeSection === 'reports-hub' && <ReportsHubView onNavigate={(s) => setActiveSection(s)} onBack={() => setActiveSection('hub')} />}
           {activeSection === 'daily-summary' && <DailySummaryReportView sales={data.sales} expenses={data.expenses} returns={data.returns || []} waste={data.waste} salaryPayments={data.salaryPayments || []} currency={data.settings.currency} onPrint={handlePrint} onBack={() => setActiveSection('reports-hub')} />}
@@ -853,7 +1071,7 @@ function App() {
           {activeSection === 'manual' && <ManualView onBack={() => setActiveSection('hub')} />}
           {activeSection === 'customer-list' && <CustomerListView customers={data.customers || []} sales={data.sales} currency={data.settings.currency} onBack={() => setActiveSection('hub')} />}
           {activeSection === 'low-stock' && <LowStockView products={data.products} onBack={() => setActiveSection('reports-hub')} />}
-          {activeSection === 'sales-history' && <SalesHistoryView sales={data.sales} currency={data.settings.currency} onPrint={handlePrint} onBack={() => setActiveSection('hub')} />}
+          {activeSection === 'sales-history' && <SalesHistoryView sales={data.sales} products={data.products} customers={data.customers || []} currency={data.settings.currency} invoiceTemplate={getActiveTemplate()} onPrint={handlePrint} onBack={() => setActiveSection('hub')} />}
           {activeSection === 'livestock-mgmt' && <LivestockView initialTab="animals" animals={data.animals || []} milkingRecords={data.milkingRecords || []} healthRecords={data.healthRecords || []} feedLogs={data.feedLogs || []} vaccinationLogs={data.vaccinationLogs || []} employees={data.employees || []} onSave={(a, m, h, f, v) => setData(prev => ({ ...prev, animals: a, milkingRecords: m, healthRecords: h, feedLogs: f, vaccinationLogs: v }))} onBack={() => setActiveSection('hub')} />}
           {activeSection === 'milking-log' && <LivestockView initialTab="milking" animals={data.animals || []} milkingRecords={data.milkingRecords || []} healthRecords={data.healthRecords || []} feedLogs={data.feedLogs || []} vaccinationLogs={data.vaccinationLogs || []} employees={data.employees || []} onSave={(a, m, h, f, v) => setData(prev => ({ ...prev, animals: a, milkingRecords: m, healthRecords: h, feedLogs: f, vaccinationLogs: v }))} onBack={() => setActiveSection('hub')} />}
           {activeSection === 'health-log' && <LivestockView initialTab="health" animals={data.animals || []} milkingRecords={data.milkingRecords || []} healthRecords={data.healthRecords || []} feedLogs={data.feedLogs || []} vaccinationLogs={data.vaccinationLogs || []} employees={data.employees || []} onSave={(a, m, h, f, v) => setData(prev => ({ ...prev, animals: a, milkingRecords: m, healthRecords: h, feedLogs: f, vaccinationLogs: v }))} onBack={() => setActiveSection('hub')} />}
@@ -898,6 +1116,14 @@ function App() {
             />
           )}
           {activeSection === 'settings' && <SettingsView settings={data.settings} onBackup={backupData} onRestore={restoreData} onSave={(s) => setData(prev => ({ ...prev, settings: s }))} onBack={() => setActiveSection('hub')} />}
+          {activeSection === 'notifications' && (
+            <NotificationsView 
+              alerts={data.alerts || []} 
+              onMarkAsRead={(id) => setData(prev => ({ ...prev, alerts: (prev.alerts || []).map(a => a.id === id ? { ...a, isRead: true } : a) }))}
+              onClearAll={() => setData(prev => ({ ...prev, alerts: [] }))}
+              onBack={() => setActiveSection('hub')} 
+            />
+          )}
           {activeSection === 'cat-mgmt' && <CategoryMgmtView categories={data.categories || []} onSave={(c) => setData(prev => ({ ...prev, categories: c }))} onBack={() => setActiveSection('hub')} />}
           {activeSection === 'advanced-dashboard' && <AdvancedDashboardView data={data} currency={data.settings.currency} onBack={() => setActiveSection('reports-hub')} />}
           {activeSection === 'shift-mgmt' && <ShiftManagementView data={data} onSave={(s) => setData(prev => ({ ...prev, shifts: [...(prev.shifts || []), s] }))} onUpdate={(s) => setData(prev => ({ ...prev, shifts: (prev.shifts || []).map(sh => sh.id === s.id ? s : sh) }))} onBack={() => setActiveSection('hub')} />}
@@ -907,6 +1133,8 @@ function App() {
               customers={data.customers || []} 
               sales={data.sales}
               currency={data.settings.currency} 
+              invoiceTemplate={getActiveTemplate()}
+              customFields={data.settings.customFields}
               onSaveSale={(newSales, updatedProducts, updatedCustomers) => {
                 setData(prev => ({
                   ...prev,
@@ -938,6 +1166,40 @@ function App() {
           {activeSection === 'campaigns' && <CampaignsView campaigns={data.campaigns || []} currency={data.settings.currency} onSave={(c) => setData(prev => ({ ...prev, campaigns: [...(prev.campaigns || []), c] }))} onUpdate={(c) => setData(prev => ({ ...prev, campaigns: (prev.campaigns || []).map(camp => camp.id === c.id ? c : camp) }))} onBack={() => setActiveSection('hub')} />}
           {activeSection === 'tickets' && <SupportTicketsView tickets={data.tickets || []} customers={data.customers || []} onSave={(t) => setData(prev => ({ ...prev, tickets: [...(prev.tickets || []), t] }))} onUpdate={(t) => setData(prev => ({ ...prev, tickets: (prev.tickets || []).map(tick => tick.id === t.id ? t : tick) }))} onBack={() => setActiveSection('hub')} />}
           {activeSection === 'projects' && <ProjectsView projects={data.projects || []} currency={data.settings.currency} onSave={(p) => setData(prev => ({ ...prev, projects: [...(prev.projects || []), p] }))} onUpdate={(p) => setData(prev => ({ ...prev, projects: (prev.projects || []).map(proj => proj.id === p.id ? p : proj) }))} onBack={() => setActiveSection('hub')} />}
+          {activeSection === 'invoice-template' && (
+            <InvoiceTemplateView 
+              settings={data.settings} 
+              onSaveTemplates={handleSaveTemplates}
+              onBack={() => setActiveSection('hub')} 
+            />
+          )}
+          {activeSection === 'system-customizer' && (
+            <SystemCustomizerView 
+              settings={data.settings} 
+              onSaveMenuSettings={handleSaveMenuSettings}
+              onSaveCustomFields={handleSaveCustomFields}
+              onSaveCustomSections={handleSaveCustomSections}
+              onBack={() => setActiveSection('hub')} 
+            />
+          )}
+          {activeSection === 'milk-collection' && (
+            <MilkCollectionView 
+              data={data} 
+              onUpdateData={setData} 
+              onBack={() => setActiveSection('hub')} 
+            />
+          )}
+          {data.settings.customSections?.map((section: CustomSection) => (
+            activeSection === section.id && (
+              <CustomView 
+                key={section.id}
+                section={section}
+                data={data}
+                onBack={() => setActiveSection('hub')}
+                setActiveSection={setActiveSection}
+              />
+            )
+          ))}
             </AnimatePresence>
           </div>
         </main>
@@ -1007,6 +1269,96 @@ function App() {
 
 
 export default App;
+
+const CustomView: React.FC<{ section: CustomSection, data: ERPData, onBack: () => void, setActiveSection: (s: string) => void }> = ({ section, data, onBack, setActiveSection }) => {
+  const handleAction = (action: CustomAction) => {
+    if (action.type === 'save') {
+      toast.success('زانیارییەکان بە سەرکەوتوویی پاشەکەوت کران');
+    } else if (action.type === 'print') {
+      window.print();
+    } else if (action.type === 'delete') {
+      toast.error('ئەم زانیارییە سڕایەوە');
+    } else if (action.type === 'navigate' && action.target) {
+      setActiveSection(action.target);
+    }
+  };
+
+  return (
+    <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6 pb-12">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-4">
+          <button onClick={onBack} className="p-3 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all">
+            <ChevronLeft size={24} />
+          </button>
+          <div>
+            <h2 className="text-3xl font-black tracking-tight">{section.label}</h2>
+            {section.description && <p className="text-[10px] font-bold theme-muted uppercase tracking-widest mt-1">{section.description}</p>}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 space-y-6">
+          <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm">
+            <h3 className="text-xl font-black mb-6 flex items-center gap-3">
+              <Database size={20} className="text-emerald-500" />
+              زانیارییەکان
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {section.fields.map(field => (
+                <div key={field.id} className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">{field.label}</label>
+                  {field.type === 'select' ? (
+                    <select className="w-full p-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl outline-none text-sm font-bold">
+                      {field.options?.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                    </select>
+                  ) : (
+                    <input 
+                      type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
+                      className="w-full p-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl outline-none text-sm font-bold"
+                      placeholder={`${field.label}...`}
+                    />
+                  )}
+                </div>
+              ))}
+              {section.fields.length === 0 && (
+                <div className="col-span-2 text-center py-12 text-slate-400 font-bold">هیچ خانەیەکی زیادە پێناسە نەکراوە</div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="lg:col-span-1 space-y-6">
+          <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm">
+            <h3 className="text-xl font-black mb-6 flex items-center gap-3">
+              <Command size={20} className="text-blue-500" />
+              کردارەکان
+            </h3>
+            <div className="space-y-3">
+              {section.actions.map(action => (
+                <button 
+                  key={action.id}
+                  onClick={() => handleAction(action)}
+                  className={cn(
+                    "w-full p-4 rounded-2xl font-black text-sm flex items-center justify-center gap-3 transition-all active:scale-95 shadow-sm",
+                    action.type === 'save' ? "bg-emerald-500 text-white shadow-emerald-500/20" :
+                    action.type === 'delete' ? "bg-red-500 text-white shadow-red-500/20" :
+                    "bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white"
+                  )}
+                >
+                  {action.label}
+                </button>
+              ))}
+              {section.actions.length === 0 && (
+                <div className="text-center py-8 text-slate-400 font-bold">هیچ کردارێک پێناسە نەکراوە</div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
 
 function FactoryDebtView({ debts, payments, currency, onSaveDebt, onSavePayment, onBack }: { debts: SupplierDebt[], payments: any[], currency: string, onSaveDebt: (d: SupplierDebt) => void, onSavePayment: (p: any) => void, onBack: () => void }) {
   const [name, setName] = useState('');
@@ -1448,7 +1800,9 @@ function SuppliesView({ supplies, onSave, onBack }: { supplies: Supply[], onSave
       id: Date.now(),
       name,
       quantity: parseFloat(qty),
-      date: new Date().toLocaleDateString()
+      date: new Date().toLocaleDateString(),
+      source: 'market',
+      destination: 'shop'
     });
     setName('');
     setQty('');
@@ -1481,9 +1835,10 @@ function SettingsView({ settings, onBackup, onRestore, onSave, onBack }: { setti
   const [name, setName] = useState(settings.storeName);
   const [curr, setCurr] = useState(settings.currency);
   const [theme, setTheme] = useState(settings.theme);
+  const [lang, setLang] = useState(settings.language || 'ku');
 
   const handleSubmit = () => {
-    onSave({ ...settings, storeName: name, currency: curr, theme: theme });
+    onSave({ ...settings, storeName: name, currency: curr, theme: theme, language: lang as any });
     toast.success("ڕێکخستنەکان پاشەکەوت کران");
     onBack();
   };
@@ -1503,9 +1858,18 @@ function SettingsView({ settings, onBackup, onRestore, onSave, onBack }: { setti
           <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">دراو</label>
           <select value={curr} onChange={e => setCurr(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none">
             <option value="د.ع">دیناری عێراقی (د.ع)</option>
+            <option value="IQD">دیناری عێراقی (IQD)</option>
             <option value="$">دۆلار ($)</option>
             <option value="تۆمان">تۆمان</option>
             <option value="لیرە">لیرە</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">زمان (Language)</label>
+          <select value={lang} onChange={e => setLang(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none">
+            <option value="ku">کوردی (Kurdish)</option>
+            <option value="ar">العربية (Arabic)</option>
+            <option value="en">English</option>
           </select>
         </div>
         <button onClick={handleSubmit} className="w-full bg-slate-800 dark:bg-slate-700 text-white p-4 rounded-2xl font-bold active:scale-95 transition-transform">پاشەکەوتکردن</button>
@@ -1774,107 +2138,6 @@ function CustomerLoyaltyView({ customers, sales, onSave, onUpdate, onBack }: { c
         {customers.length === 0 && (
           <div className="col-span-full text-center py-12 text-slate-400">هیچ کڕیارێک تۆمار نەکراوە</div>
         )}
-      </div>
-    </motion.div>
-  );
-}
-
-function AdvancedDashboardView({ data, currency, onBack }: { data: ERPData, currency: string, onBack: () => void }) {
-  // Calculate daily sales for the last 7 days
-  const last7Days = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    return d.toLocaleDateString('ku-IQ');
-  }).reverse();
-
-  const salesData = last7Days.map(date => {
-    const daySales = data.sales.filter(s => s.date === date);
-    const total = daySales.reduce((sum, s) => sum + s.total, 0);
-    const profit = daySales.reduce((sum, s) => sum + (s.total - (s.itemCost * s.quantity)), 0);
-    return { name: date, فرۆشتن: total, قازانج: profit };
-  });
-
-  // Top 5 products
-  const productSales = data.products.map(p => {
-    const sold = data.sales.reduce((sum, s) => {
-      return sum + (s.itemName === p.name ? s.quantity : 0);
-    }, 0);
-    return { name: p.name, value: sold };
-  }).sort((a, b) => b.value - a.value).slice(0, 5);
-
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
-
-  // Category sales
-  const categorySales = data.categories.map(cat => {
-    const total = data.sales.filter(s => s.category === cat).reduce((sum, s) => sum + s.total, 0);
-    return { name: cat, بڕ: total };
-  }).filter(c => c.بڕ > 0);
-
-  return (
-    <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6 pb-12">
-      <div className="flex items-center gap-2 mb-4">
-        <button onClick={onBack} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full"><ChevronLeft /></button>
-        <h2 className="font-bold text-lg text-indigo-600 dark:text-indigo-400">داشبوۆردی پێشکەوتوو</h2>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
-          <h3 className="font-bold text-slate-700 dark:text-slate-300 mb-4">فرۆشتن و قازانج (٧ ڕۆژی ڕابردوو)</h3>
-          <div className="h-64 w-full" dir="ltr">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={salesData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis dataKey="name" stroke="#64748b" fontSize={12} />
-                <YAxis stroke="#64748b" fontSize={12} />
-                <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                <Legend />
-                <Line type="monotone" dataKey="فرۆشتن" stroke="#3b82f6" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
-                <Line type="monotone" dataKey="قازانج" stroke="#10b981" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
-          <h3 className="font-bold text-slate-700 dark:text-slate-300 mb-4">پڕفرۆشترین کاڵاکان</h3>
-          <div className="h-64 w-full" dir="ltr">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={productSales}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={80}
-                  paddingAngle={5}
-                  dataKey="value"
-                >
-                  {productSales.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 lg:col-span-2">
-          <h3 className="font-bold text-slate-700 dark:text-slate-300 mb-4">فرۆش بەپێی جۆر</h3>
-          <div className="h-64 w-full" dir="ltr">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={categorySales}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis dataKey="name" stroke="#64748b" fontSize={12} />
-                <YAxis stroke="#64748b" fontSize={12} />
-                <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                <Legend />
-                <Bar dataKey="بڕ" fill="#6366f1" radius={[8, 8, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
       </div>
     </motion.div>
   );

@@ -10,13 +10,14 @@ export interface Product {
   expiryDate?: string;
   discount?: number;
   unit: string;
+  [key: string]: any; // Allow custom fields
 }
 
 export interface Sale {
   id: number;
-  receiptId?: string; // To group items in one receipt
+  receiptId?: string;
   customerName: string;
-  driverName?: string; // Added driverName
+  driverName?: string;
   itemName: string;
   itemCost: number;
   quantity: number;
@@ -28,6 +29,7 @@ export interface Sale {
   category?: string;
   source?: 'pos' | 'driver' | 'shop';
   note?: string;
+  [key: string]: any; // Allow custom fields
 }
 
 export interface Expense {
@@ -80,10 +82,83 @@ export interface Supply {
   cost?: number;
 }
 
+export interface VisualInvoiceSection {
+  id: string;
+  type: 'header' | 'customer' | 'items' | 'totals' | 'footer' | 'text' | 'image';
+  isVisible: boolean;
+  styles: {
+    fontSize?: string;
+    fontWeight?: string;
+    textAlign?: 'right' | 'left' | 'center';
+    backgroundColor?: string;
+    color?: string;
+    padding?: string;
+    borderBottom?: string;
+  };
+  content?: {
+    title?: string;
+    subtitle?: string;
+    logoUrl?: string;
+    labels?: Record<string, string>;
+  };
+}
+
+export interface InvoiceTemplate {
+  id: string;
+  name: string;
+  content: string;
+  visualConfig?: VisualInvoiceSection[];
+}
+
+export interface CustomMenuSetting {
+  id: string;
+  label: string;
+  isVisible: boolean;
+  icon?: string;
+  category?: string;
+}
+
+export interface CustomAction {
+  id: string;
+  label: string;
+  type: 'navigate' | 'print' | 'save' | 'delete' | 'custom';
+  target?: string;
+  icon?: string;
+}
+
+export interface CustomSection {
+  id: string;
+  label: string;
+  icon: string;
+  category: string;
+  isVisible: boolean;
+  isCustom: boolean;
+  fields: CustomField[];
+  actions: CustomAction[];
+  description?: string;
+}
+
+export interface CustomField {
+  id: string;
+  entity: 'product' | 'sale' | 'customer' | 'supplier';
+  label: string;
+  type: 'text' | 'number' | 'date' | 'select';
+  options?: string[]; // For select type
+  isVisible: boolean;
+  required: boolean;
+}
+
 export interface Settings {
   storeName: string;
   currency: string;
   theme: 'light' | 'dark' | 'system';
+  language: 'ku' | 'ar' | 'en';
+  invoiceTemplate?: string; // Legacy
+  invoiceTemplates?: InvoiceTemplate[];
+  activeInvoiceTemplateId?: string;
+  menuSettings?: CustomMenuSetting[];
+  customFields?: CustomField[];
+  customSections?: CustomSection[];
 }
 
 export interface Supplier {
@@ -291,7 +366,7 @@ export interface Animal {
   gender?: 'نێر' | 'مێ';
   birthDate: string;
   weight: number;
-  status: 'تەندروست' | 'نەخۆش' | 'چارەسەر';
+  status: 'تەندروست' | 'نەخۆش' | 'چارەسەر' | 'مردوو' | 'فرۆشراو';
   purchaseDate?: string;
   purchasePrice?: number;
   motherId?: string;
@@ -299,6 +374,10 @@ export interface Animal {
   caretakerId?: number;
   milkerId?: number;
   cleanerId?: number;
+  deathDate?: string;
+  deathReason?: string;
+  saleDate?: string;
+  salePrice?: number;
 }
 
 export interface MilkingRecord {
@@ -345,6 +424,7 @@ export interface User {
   code: string;
   role: 'admin' | 'accountant' | 'driver' | 'shop' | 'factory' | 'livestock';
   allowedSections: string[];
+  email?: string;
 }
 
 export interface ShopRequestItem {
@@ -361,9 +441,50 @@ export interface ShopRequest {
   status: 'pending' | 'approved' | 'rejected';
 }
 
+export interface Alert {
+  id: number;
+  type: 'low-stock' | 'debt-due' | 'expiry' | 'maintenance' | 'system';
+  title: string;
+  message: string;
+  date: string;
+  isRead: boolean;
+  severity: 'info' | 'warning' | 'error';
+  link?: string;
+}
+
+export interface RewardRedemption {
+  id: number;
+  customerId: number;
+  pointsUsed: number;
+  rewardDescription: string;
+  date: string;
+}
+
+export interface Farmer {
+  id: number;
+  name: string;
+  phone: string;
+  address?: string;
+  milkPrice: number;
+}
+
+export interface MilkCollection {
+  id: number;
+  farmerId: number;
+  farmerName: string;
+  quantity: number;
+  pricePerLiter: number;
+  totalPrice: number;
+  date: string;
+  status: 'collected' | 'delivered';
+  note?: string;
+}
+
 export interface ERPData {
   users?: User[];
   shopRequests?: ShopRequest[];
+  farmers?: Farmer[];
+  milkCollections?: MilkCollection[];
   products: Product[];
   sales: Sale[];
   expenses: Expense[];
@@ -395,5 +516,7 @@ export interface ERPData {
   feedLogs?: FeedLog[];
   vaccinationLogs?: VaccinationLog[];
   draftOrders?: DraftOrder[];
+  alerts?: Alert[];
+  rewardRedemptions?: RewardRedemption[];
   settings: Settings;
 }
