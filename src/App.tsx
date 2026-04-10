@@ -77,6 +77,7 @@ import { AccountantView } from './AccountantView';
 import { cn, customConfirm, handleConfirm } from './lib/utils';
 import { db, auth, handleFirestoreError, OperationType } from './firebase';
 import { onSnapshot, collection, doc, setDoc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
+import { onAuthStateChanged } from 'firebase/auth';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, BarChart, Bar, Legend } from 'recharts';
 import { Product, Sale, Expense, Waste, ERPData, Payment, SupplierDebt, SupplierPayment, Supply, Settings, Supplier, Return, Shift, Employee, SalaryPayment, PurchaseOrder, PurchaseOrderItem, Customer, Task, Asset, Recipe, RecipeItem, ProductionOrder, Vehicle, Project, SupportTicket, Campaign, Driver, Animal, MilkingRecord, HealthRecord, DraftOrder, DraftOrderItem, Alert, InvoiceTemplate, CustomMenuSetting, CustomField, CustomSection, CustomAction } from './types';
 import { MENU_CATEGORIES, MENU_ITEMS } from './constants';
@@ -201,10 +202,21 @@ function App() {
   });
   const [data, setData] = useState<ERPData>(INITIAL_DATA);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
+  const [firebaseUser, setFirebaseUser] = useState<any>(null);
+  const [isAuthReady, setIsAuthReady] = useState(false);
+
+  // Firebase Auth Listener
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setFirebaseUser(user);
+      setIsAuthReady(true);
+    });
+    return () => unsubscribe();
+  }, []);
 
   // Firebase Real-time Sync
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser || !firebaseUser) return;
 
     const collections = ['products', 'sales', 'farmers', 'milkCollections', 'users', 'customers', 'expenses', 'waste', 'payments', 'supplierDebts', 'supplierPayments', 'supplies', 'returns', 'shifts', 'employees', 'salaryPayments', 'purchaseOrders', 'assets', 'recipes', 'productionOrders', 'vehicles', 'projects', 'supportTickets', 'campaigns', 'drivers', 'animals', 'milkingRecords', 'healthRecords', 'feedLogs', 'vaccinationLogs', 'rewardRedemptions', 'alerts'];
     
@@ -231,7 +243,7 @@ function App() {
       unsubscribes.forEach(unsub => unsub());
       unsubSettings();
     };
-  }, [currentUser]);
+  }, [currentUser, firebaseUser]);
 
   // Sync data to Firebase (Debounced or on change)
   // Note: In a real app, we should use individual add/update/delete functions

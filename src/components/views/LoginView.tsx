@@ -4,7 +4,7 @@ import { Lock, User, LogIn, Chrome } from 'lucide-react';
 import { User as UserType } from '../../types';
 import { toast } from 'sonner';
 import { auth, googleProvider } from '../../firebase';
-import { signInWithPopup } from 'firebase/auth';
+import { signInWithPopup, signInAnonymously } from 'firebase/auth';
 
 interface LoginViewProps {
   users: UserType[];
@@ -16,25 +16,36 @@ export function LoginView({ users, onLogin, darkMode }: LoginViewProps) {
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if ((users.length === 0 && name === 'admin' && code === 'admin') || (name === 'admin' && code === 'admin')) {
-      // Default admin fallback
-      onLogin({
-        id: 1,
-        name: 'admin',
-        code: 'admin',
-        role: 'admin',
-        allowedSections: ['*']
-      });
+      try {
+        await signInAnonymously(auth);
+        onLogin({
+          id: 1,
+          name: 'admin',
+          code: 'admin',
+          role: 'admin',
+          allowedSections: ['*']
+        });
+      } catch (error) {
+        console.error(error);
+        toast.error('هەڵە لە پەیوەندی بە سێرڤەر');
+      }
       return;
     }
 
     const user = users.find(u => u.name === name && u.code === code);
     if (user) {
-      onLogin(user);
-      toast.success(`بەخێربێیت ${user.name}`);
+      try {
+        await signInAnonymously(auth);
+        onLogin(user);
+        toast.success(`بەخێربێیت ${user.name}`);
+      } catch (error) {
+        console.error(error);
+        toast.error('هەڵە لە پەیوەندی بە سێرڤەر');
+      }
     } else {
       toast.error('ناو یان کۆد هەڵەیە');
     }

@@ -80,16 +80,11 @@ service cloud.firestore {
 
     function isAdmin() {
       return isAuthenticated() && 
-        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
-         (request.auth.token.email == "yusfa886@gmail.com" && request.auth.token.email_verified == true));
+        (request.auth.token.email == "yusfa886@gmail.com" && request.auth.token.email_verified == true);
     }
 
-    function hasRequiredFields(fields) {
-      return request.resource.data.keys().hasAll(fields);
-    }
-
-    function hasOnlyAllowedFields(fields) {
-      return request.resource.data.keys().hasOnly(fields);
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
     }
 
     // ===============================================================
@@ -98,8 +93,7 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow read: if isAuthenticated();
-      allow create, update: if isAdmin();
-      allow delete: if isAdmin();
+      allow create, update, delete: if isAdmin();
     }
 
     match /settings/global {
@@ -130,33 +124,33 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    match /customers/{id} { allow read, write: if isAuthenticated(); }
-    match /expenses/{id} { allow read, write: if isAuthenticated(); }
-    match /waste/{id} { allow read, write: if isAuthenticated(); }
-    match /payments/{id} { allow read, write: if isAuthenticated(); }
-    match /supplierDebts/{id} { allow read, write: if isAuthenticated(); }
-    match /supplierPayments/{id} { allow read, write: if isAuthenticated(); }
-    match /supplies/{id} { allow read, write: if isAuthenticated(); }
-    match /returns/{id} { allow read, write: if isAuthenticated(); }
-    match /shifts/{id} { allow read, write: if isAuthenticated(); }
-    match /employees/{id} { allow read, write: if isAuthenticated(); }
-    match /salaryPayments/{id} { allow read, write: if isAuthenticated(); }
-    match /purchaseOrders/{id} { allow read, write: if isAuthenticated(); }
-    match /assets/{id} { allow read, write: if isAuthenticated(); }
-    match /recipes/{id} { allow read, write: if isAuthenticated(); }
-    match /productionOrders/{id} { allow read, write: if isAuthenticated(); }
-    match /vehicles/{id} { allow read, write: if isAuthenticated(); }
-    match /projects/{id} { allow read, write: if isAuthenticated(); }
-    match /supportTickets/{id} { allow read, write: if isAuthenticated(); }
-    match /campaigns/{id} { allow read, write: if isAuthenticated(); }
-    match /drivers/{id} { allow read, write: if isAuthenticated(); }
-    match /animals/{id} { allow read, write: if isAuthenticated(); }
-    match /milkingRecords/{id} { allow read, write: if isAuthenticated(); }
-    match /healthRecords/{id} { allow read, write: if isAuthenticated(); }
-    match /feedLogs/{id} { allow read, write: if isAuthenticated(); }
-    match /vaccinationLogs/{id} { allow read, write: if isAuthenticated(); }
-    match /rewardRedemptions/{id} { allow read, write: if isAuthenticated(); }
-    match /alerts/{id} { allow read, write: if isAuthenticated(); }
+    match /customers/{id} { allow read: if isAuthenticated(); allow write: if isAuthenticated(); }
+    match /expenses/{id} { allow read: if isAuthenticated(); allow write: if isAuthenticated(); }
+    match /waste/{id} { allow read: if isAuthenticated(); allow write: if isAuthenticated(); }
+    match /payments/{id} { allow read: if isAuthenticated(); allow write: if isAuthenticated(); }
+    match /supplierDebts/{id} { allow read: if isAuthenticated(); allow write: if isAuthenticated(); }
+    match /supplierPayments/{id} { allow read: if isAuthenticated(); allow write: if isAuthenticated(); }
+    match /supplies/{id} { allow read: if isAuthenticated(); allow write: if isAuthenticated(); }
+    match /returns/{id} { allow read: if isAuthenticated(); allow write: if isAuthenticated(); }
+    match /shifts/{id} { allow read: if isAuthenticated(); allow write: if isAuthenticated(); }
+    match /employees/{id} { allow read: if isAuthenticated(); allow write: if isAuthenticated(); }
+    match /salaryPayments/{id} { allow read: if isAuthenticated(); allow write: if isAuthenticated(); }
+    match /purchaseOrders/{id} { allow read: if isAuthenticated(); allow write: if isAuthenticated(); }
+    match /assets/{id} { allow read: if isAuthenticated(); allow write: if isAuthenticated(); }
+    match /recipes/{id} { allow read: if isAuthenticated(); allow write: if isAuthenticated(); }
+    match /productionOrders/{id} { allow read: if isAuthenticated(); allow write: if isAuthenticated(); }
+    match /vehicles/{id} { allow read: if isAuthenticated(); allow write: if isAuthenticated(); }
+    match /projects/{id} { allow read: if isAuthenticated(); allow write: if isAuthenticated(); }
+    match /supportTickets/{id} { allow read: if isAuthenticated(); allow write: if isAuthenticated(); }
+    match /campaigns/{id} { allow read: if isAuthenticated(); allow write: if isAuthenticated(); }
+    match /drivers/{id} { allow read: if isAuthenticated(); allow write: if isAuthenticated(); }
+    match /animals/{id} { allow read: if isAuthenticated(); allow write: if isAuthenticated(); }
+    match /milkingRecords/{id} { allow read: if isAuthenticated(); allow write: if isAuthenticated(); }
+    match /healthRecords/{id} { allow read: if isAuthenticated(); allow write: if isAuthenticated(); }
+    match /feedLogs/{id} { allow read: if isAuthenticated(); allow write: if isAuthenticated(); }
+    match /vaccinationLogs/{id} { allow read: if isAuthenticated(); allow write: if isAuthenticated(); }
+    match /rewardRedemptions/{id} { allow read: if isAuthenticated(); allow write: if isAuthenticated(); }
+    match /alerts/{id} { allow read: if isAuthenticated(); allow write: if isAuthenticated(); }
 
     match /{path=**} {
       allow read, write: if false;
