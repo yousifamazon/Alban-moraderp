@@ -867,9 +867,28 @@ function App() {
                 <div className="absolute top-3 left-3 w-2 h-2 bg-red-500 rounded-full border-2 theme-bg" />
               )}
             </button>
-            <div className="h-10 w-10 rounded-2xl bg-current flex items-center justify-center font-black text-xs">
-              <span className="text-black">AM</span>
+            
+            <div className="flex items-center gap-3 px-3 py-2 rounded-2xl theme-hover border theme-border">
+              <div className="text-left">
+                <p className="text-[10px] font-black tracking-tight leading-none">{currentUser.name}</p>
+                {currentUser.email && (
+                  <p className="text-[8px] theme-muted font-bold mt-1">{currentUser.email}</p>
+                )}
+              </div>
+              {firebaseUser?.photoURL ? (
+                <img 
+                  src={firebaseUser.photoURL} 
+                  alt={currentUser.name}
+                  className="h-9 w-9 rounded-xl object-cover border border-white/10"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <div className="h-9 w-9 rounded-xl bg-emerald-500 flex items-center justify-center font-black text-xs text-white">
+                  {currentUser.name.substring(0, 2).toUpperCase()}
+                </div>
+              )}
             </div>
+
             <button 
               onClick={async () => {
                 const confirmed = await customConfirm('ئایا دڵنیایت لە چوونەدەرەوە؟');
@@ -898,7 +917,19 @@ function App() {
               <h1 className="font-black text-lg tracking-tighter">{data.settings.storeName}</h1>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
+            {firebaseUser?.photoURL ? (
+              <img 
+                src={firebaseUser.photoURL} 
+                alt={currentUser.name}
+                className="h-8 w-8 rounded-lg object-cover border border-white/10"
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <div className="h-8 w-8 rounded-lg bg-emerald-500 flex items-center justify-center font-black text-[10px] text-white">
+                {currentUser.name.substring(0, 2).toUpperCase()}
+              </div>
+            )}
             <button 
               onClick={async () => {
                 const confirmed = await customConfirm('ئایا دڵنیایت لە چوونەدەرەوە؟');
