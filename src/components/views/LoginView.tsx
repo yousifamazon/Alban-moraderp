@@ -29,9 +29,9 @@ export function LoginView({ users, onLogin, darkMode }: LoginViewProps) {
           role: 'admin',
           allowedSections: ['*']
         });
-      } catch (error) {
+      } catch (error: any) {
         console.error(error);
-        toast.error('هەڵە لە پەیوەندی بە سێرڤەر');
+        toast.error(`هەڵە لە چوونەژوورەوە: ${error.message || 'پەیوەندی نییە'}`);
       }
       return;
     }
@@ -42,9 +42,9 @@ export function LoginView({ users, onLogin, darkMode }: LoginViewProps) {
         await signInAnonymously(auth);
         onLogin(user);
         toast.success(`بەخێربێیت ${user.name}`);
-      } catch (error) {
+      } catch (error: any) {
         console.error(error);
-        toast.error('هەڵە لە پەیوەندی بە سێرڤەر');
+        toast.error(`هەڵە لە چوونەژوورەوە: ${error.message || 'پەیوەندی نییە'}`);
       }
     } else {
       toast.error('ناو یان کۆد هەڵەیە');
@@ -72,9 +72,9 @@ export function LoginView({ users, onLogin, darkMode }: LoginViewProps) {
       } else {
         toast.error('ئەم ئیمەیڵە ڕێگەی پێنەدراوە بچێتە ژوورەوە');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      toast.error('هەڵە لە چوونەژوورەوە بە گووگڵ');
+      toast.error(`هەڵە لە چوونەژوورەوە بە گووگڵ: ${error.message || 'پەیوەندی نییە'}`);
     }
   };
 
