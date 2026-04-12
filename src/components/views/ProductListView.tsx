@@ -14,6 +14,7 @@ import {
   AlertTriangle, 
   TrendingUp, 
   TrendingDown, 
+  Trash2,
   Barcode 
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -21,17 +22,18 @@ import * as XLSX from 'xlsx';
 import JsBarcode from 'jsbarcode';
 import { Card } from '../ui/Card';
 import { Product } from '../../types';
-import { cn } from '../../lib/utils';
+import { cn, customConfirm } from '../../lib/utils';
 
 interface ProductListViewProps {
   products: Product[];
   currency: string;
   onPrint: (title: string, content: string) => void;
   onUpdate: (updatedProducts: Product[]) => void;
+  onDelete?: (id: number) => void;
   onBack: () => void;
 }
 
-export function ProductListView({ products, currency, onPrint, onUpdate, onBack }: ProductListViewProps) {
+export function ProductListView({ products, currency, onPrint, onUpdate, onDelete, onBack }: ProductListViewProps) {
   const [search, setSearch] = useState('');
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<Partial<Product>>({});
@@ -269,6 +271,18 @@ export function ProductListView({ products, currency, onPrint, onUpdate, onBack 
                   ) : (
                     <button onClick={() => startEditing(p)} className="p-3 bg-white/5 hover:bg-emerald-500/20 text-white/40 hover:text-emerald-500 rounded-xl transition-all active:scale-95">
                       <Edit3 size={18} />
+                    </button>
+                  )}
+                  {onDelete && (
+                    <button 
+                      onClick={async () => {
+                        if (await customConfirm("ئایا دڵنیایت لە سڕینەوەی ئەم کاڵایە؟")) {
+                          onDelete(p.id);
+                        }
+                      }} 
+                      className="p-3 bg-white/5 hover:bg-red-500/20 text-white/40 hover:text-red-500 rounded-xl transition-all active:scale-95"
+                    >
+                      <Trash2 size={18} />
                     </button>
                   )}
                 </div>

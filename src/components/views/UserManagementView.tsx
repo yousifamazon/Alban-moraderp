@@ -4,6 +4,7 @@ import { ChevronLeft, Plus, Trash2, User as UserIcon, Shield, Key } from 'lucide
 import { User } from '../../types';
 import { toast } from 'sonner';
 import { MENU_ITEMS } from '../../constants';
+import { customConfirm } from '../../lib/utils';
 
 interface UserManagementViewProps {
   users: User[];
@@ -18,7 +19,14 @@ export function UserManagementView({ users, onUpdateUsers, onBack, darkMode }: U
     name: '',
     code: '',
     role: 'shop',
-    allowedSections: []
+    allowedSections: [],
+    permissions: {
+      canEditPrice: false,
+      canDeleteSale: false,
+      canGiveDiscount: true,
+      canViewProfit: false,
+      canManageUsers: false
+    }
   });
 
   const handleAddUser = () => {
@@ -32,17 +40,36 @@ export function UserManagementView({ users, onUpdateUsers, onBack, darkMode }: U
       name: newUser.name,
       code: newUser.code,
       role: newUser.role as any,
-      allowedSections: newUser.allowedSections || []
+      allowedSections: newUser.allowedSections || [],
+      permissions: newUser.permissions || {
+        canEditPrice: false,
+        canDeleteSale: false,
+        canGiveDiscount: true,
+        canViewProfit: false,
+        canManageUsers: false
+      }
     };
 
     onUpdateUsers([...users, user]);
     setShowAddModal(false);
-    setNewUser({ name: '', code: '', role: 'shop', allowedSections: [] });
+    setNewUser({ 
+      name: '', 
+      code: '', 
+      role: 'shop', 
+      allowedSections: [],
+      permissions: {
+        canEditPrice: false,
+        canDeleteSale: false,
+        canGiveDiscount: true,
+        canViewProfit: false,
+        canManageUsers: false
+      }
+    });
     toast.success('بەکارهێنەر زیادکرا');
   };
 
-  const handleDeleteUser = (id: number) => {
-    if (confirm('دڵنیایت لە سڕینەوەی ئەم بەکارهێنەرە؟')) {
+  const handleDeleteUser = async (id: number) => {
+    if (await customConfirm('دڵنیایت لە سڕینەوەی ئەم بەکارهێنەرە؟')) {
       onUpdateUsers(users.filter(u => u.id !== id));
       toast.success('بەکارهێنەر سڕایەوە');
     }
@@ -80,36 +107,60 @@ export function UserManagementView({ users, onUpdateUsers, onBack, darkMode }: U
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {users.map(user => (
-          <div key={user.id} className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col">
+          <div key={user.id} className="item-card group">
             <div className="flex justify-between items-start mb-6">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500">
-                  <UserIcon size={24} />
+                <div className="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center text-slate-400 group-hover:text-white transition-all">
+                  <UserIcon size={28} />
                 </div>
                 <div>
-                  <h3 className="font-black text-lg text-slate-800 dark:text-slate-100">{user.name}</h3>
-                  <p className="text-xs font-bold text-slate-500">{user.role}</p>
+                  <h3 className="font-black text-lg text-white">{user.name}</h3>
+                  <p className="text-[10px] font-bold theme-muted uppercase tracking-widest mt-1">{user.role}</p>
                 </div>
               </div>
-              <button onClick={() => handleDeleteUser(user.id)} className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl transition-all">
+              <button 
+                onClick={() => handleDeleteUser(user.id)} 
+                className="p-2 bg-white/5 hover:bg-red-500/20 text-slate-400 hover:text-red-500 rounded-xl transition-all"
+              >
                 <Trash2 size={18} />
               </button>
             </div>
-            <div className="space-y-2 flex-1">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">بەشە ڕێگەپێدراوەکان</p>
-              <div className="flex flex-wrap gap-2">
-                {user.allowedSections.includes('*') ? (
-                  <span className="px-3 py-1 bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 rounded-lg text-[10px] font-bold">هەموو بەشەکان</span>
-                ) : (
-                  user.allowedSections.map(sec => {
-                    const menuItem = MENU_ITEMS.find(m => m.id === sec);
-                    return menuItem ? (
-                      <span key={sec} className="px-3 py-1 bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 rounded-lg text-[10px] font-bold">
-                        {menuItem.label}
+            
+            <div className="space-y-4 flex-1">
+              <div className="space-y-2">
+                <p className="text-[10px] font-black theme-muted uppercase tracking-widest">بەشە ڕێگەپێدراوەکان</p>
+                <div className="flex flex-wrap gap-2">
+                  {user.allowedSections.includes('*') ? (
+                    <span className="px-3 py-1 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 rounded-lg text-[10px] font-black">هەموو بەشەکان</span>
+                  ) : (
+                    user.allowedSections.map(sec => {
+                      const menuItem = MENU_ITEMS.find(m => m.id === sec);
+                      return menuItem ? (
+                        <span key={sec} className="px-3 py-1 bg-white/5 text-slate-300 border border-white/10 rounded-lg text-[10px] font-black">
+                          {menuItem.label}
+                        </span>
+                      ) : null;
+                    })
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-2 pt-4 border-t border-white/5">
+                <p className="text-[10px] font-black theme-muted uppercase tracking-widest">دەسەڵاتەکان</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {user.permissions && Object.entries(user.permissions).map(([key, value]) => (
+                    <div key={key} className="flex items-center gap-2">
+                      <div className={cn("w-1.5 h-1.5 rounded-full", value ? 'bg-emerald-500' : 'bg-red-500')} />
+                      <span className="text-[10px] font-bold theme-muted">
+                        {key === 'canEditPrice' && 'گۆڕینی نرخ'}
+                        {key === 'canDeleteSale' && 'سڕینەوەی وەسڵ'}
+                        {key === 'canGiveDiscount' && 'داشکان'}
+                        {key === 'canViewProfit' && 'بینینی قازانج'}
+                        {key === 'canManageUsers' && 'بەڕێوەبردن'}
                       </span>
-                    ) : null;
-                  })
-                )}
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
@@ -170,25 +221,56 @@ export function UserManagementView({ users, onUpdateUsers, onBack, darkMode }: U
               </div>
 
               {newUser.role !== 'admin' && (
-                <div className="space-y-4 pt-4 border-t border-slate-100 dark:border-slate-800">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">بەشە ڕێگەپێدراوەکان</label>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                    {MENU_ITEMS.map(item => (
-                      <button
-                        key={item.id}
-                        onClick={() => toggleSection(item.id)}
-                        className={`p-3 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-                          (newUser.allowedSections || []).includes(item.id)
-                            ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
-                            : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
-                        }`}
-                      >
-                        {item.icon}
-                        {item.label}
-                      </button>
-                    ))}
+                <>
+                  <div className="space-y-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">دەسەڵاتەکان</label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {Object.entries(newUser.permissions || {}).map(([key, value]) => (
+                        <label key={key} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-all">
+                          <span className="text-xs font-bold">
+                            {key === 'canEditPrice' && 'گۆڕینی نرخی فرۆشتن'}
+                            {key === 'canDeleteSale' && 'سڕینەوەی وەسڵەکان'}
+                            {key === 'canGiveDiscount' && 'پێدانی داشکان'}
+                            {key === 'canViewProfit' && 'بینینی قازانج و تێچوو'}
+                            {key === 'canManageUsers' && 'بەڕێوەبردنی بەکارهێنەران'}
+                          </span>
+                          <input 
+                            type="checkbox" 
+                            checked={value as boolean}
+                            onChange={(e) => setNewUser({
+                              ...newUser,
+                              permissions: {
+                                ...(newUser.permissions as any),
+                                [key]: e.target.checked
+                              }
+                            })}
+                            className="w-5 h-5 rounded-lg accent-emerald-500"
+                          />
+                        </label>
+                      ))}
+                    </div>
                   </div>
-                </div>
+
+                  <div className="space-y-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">بەشە ڕێگەپێدراوەکان</label>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {MENU_ITEMS.map(item => (
+                        <button
+                          key={item.id}
+                          onClick={() => toggleSection(item.id)}
+                          className={`p-3 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                            (newUser.allowedSections || []).includes(item.id)
+                              ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
+                              : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
+                          }`}
+                        >
+                          {item.icon}
+                          {item.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </>
               )}
 
               <div className="flex gap-4 pt-6">

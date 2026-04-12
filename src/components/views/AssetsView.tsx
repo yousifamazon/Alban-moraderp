@@ -68,41 +68,50 @@ export function AssetsView({ assets, currency, onSave, onUpdate, onBack }: Asset
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {assets.map(a => (
-          <div key={a.id} className="bg-white dark:bg-slate-900 p-5 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
-            <div className="flex justify-between items-start mb-2">
-              <div>
-                <h3 className="font-bold text-lg text-slate-800 dark:text-slate-100">{a.name}</h3>
-                <p className="text-xs text-slate-500">{a.category} • {a.purchaseDate}</p>
+          <div key={a.id} className="item-card group">
+            <div className="flex justify-between items-start">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center text-emerald-500 group-hover:text-white transition-all">
+                  <Plus size={28} className="rotate-45" />
+                </div>
+                <div>
+                  <h3 className="font-black text-lg text-white">{a.name}</h3>
+                  <p className="text-[10px] font-bold theme-muted mt-1">{a.category} • {a.purchaseDate}</p>
+                </div>
               </div>
               <select 
                 value={a.status} 
                 onChange={e => onUpdate({...a, status: e.target.value as any})}
-                className={cn("text-xs px-2 py-1 rounded-full font-bold outline-none", 
-                  a.status === 'active' ? "bg-emerald-100 text-emerald-700" : 
-                  a.status === 'maintenance' ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"
+                className={cn("text-[8px] px-2 py-1 rounded-full font-black uppercase outline-none transition-all border", 
+                  a.status === 'active' ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" : 
+                  a.status === 'maintenance' ? "bg-amber-500/10 text-amber-500 border-amber-500/20" : "bg-red-500/10 text-red-500 border-red-500/20"
                 )}
               >
                 <option value="active">چالاک</option>
-                <option value="maintenance">لە چاککردنەوەدایە</option>
+                <option value="maintenance">چاککردنەوە</option>
                 <option value="disposed">لەکارکەوتوو</option>
               </select>
             </div>
-            <div className="flex justify-between mt-4 p-3 bg-slate-50 dark:bg-slate-800 rounded-xl">
-              <div>
-                <p className="text-[10px] text-slate-500 mb-1">نرخی کڕین</p>
-                <p className="font-bold">{a.purchasePrice.toLocaleString()} {currency}</p>
+            
+            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/5">
+              <div className="space-y-1">
+                <p className="text-[10px] font-black theme-muted uppercase tracking-widest">نرخی کڕین</p>
+                <p className="text-sm font-black text-white">{a.purchasePrice.toLocaleString()} {currency}</p>
               </div>
-              <div className="text-right">
-                <p className="text-[10px] text-slate-500 mb-1">نرخی ئێستا</p>
-                <p className="font-bold text-emerald-600 dark:text-emerald-400">{a.currentValue.toLocaleString()} {currency}</p>
+              <div className="space-y-1">
+                <p className="text-[10px] font-black theme-muted uppercase tracking-widest">نرخی ئێستا</p>
+                <p className="text-sm font-black text-emerald-500">{a.currentValue.toLocaleString()} {currency}</p>
               </div>
             </div>
           </div>
         ))}
         {assets.length === 0 && (
-          <div className="col-span-full text-center py-12 text-slate-400">هیچ سەرمایەیەک تۆمار نەکراوە</div>
+          <div className="col-span-full text-center py-20 bg-white/5 rounded-[3rem] border-2 border-dashed border-white/10">
+            <Plus size={48} className="mx-auto text-slate-700 mb-4 opacity-20" />
+            <p className="text-slate-500 font-bold">هیچ سەرمایەیەک تۆمار نەکراوە</p>
+          </div>
         )}
       </div>
     </motion.div>

@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Employee, SalaryPayment } from '../../types';
+import { customConfirm } from '../../lib/utils';
 
 interface EmployeeManagementViewProps {
   employees: Employee[];
@@ -82,57 +83,76 @@ export function EmployeeManagementView({ employees, employeePayments, onSaveEmpl
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {employees?.map(emp => (
-          <div key={emp.id} className={`bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 space-y-4 ${emp.status !== 'active' ? 'opacity-60' : ''}`}>
+          <div key={emp.id} className={cn("item-card group", emp.status !== 'active' && 'opacity-60')}>
             <div className="flex justify-between items-start">
-              <div className="space-y-1">
-                <h3 className="font-bold text-lg text-slate-800 dark:text-slate-200">{emp.name}</h3>
-                <span className="text-xs bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-2 py-1 rounded-lg">{emp.role}</span>
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center text-slate-400 group-hover:text-white transition-all">
+                  <UserCheck size={28} />
+                </div>
+                <div>
+                  <h3 className="font-black text-lg text-white">{emp.name}</h3>
+                  <span className="text-[10px] bg-white/5 text-slate-400 px-2 py-1 rounded-lg font-black uppercase tracking-widest border border-white/5">{emp.role}</span>
+                </div>
               </div>
               <div className="flex gap-2">
-                <button onClick={() => onUpdateEmployee({ ...emp, status: emp.status === 'active' ? 'inactive' : 'active' })} className={`p-2 rounded-xl transition-colors ${emp.status === 'active' ? 'text-emerald-500 bg-emerald-50 dark:bg-emerald-900/20' : 'text-slate-400 bg-slate-50 dark:bg-slate-800'}`}>
+                <button onClick={() => onUpdateEmployee({ ...emp, status: emp.status === 'active' ? 'inactive' : 'active' })} className={cn("p-2 rounded-xl transition-all", emp.status === 'active' ? 'text-emerald-500 bg-emerald-500/10 border border-emerald-500/20' : 'text-slate-400 bg-white/5 border border-white/10')}>
                   {emp.status === 'active' ? <UserCheck size={18} /> : <UserX size={18} />}
                 </button>
-                <button onClick={() => onDeleteEmployee(emp.id)} className="p-2 text-red-500 bg-red-50 dark:bg-red-900/20 rounded-xl transition-colors"><Trash2 size={18} /></button>
+                <button 
+                  onClick={async () => {
+                    if (await customConfirm("ئایا دڵنیایت لە سڕینەوەی ئەم کارمەندە؟")) {
+                      onDeleteEmployee(emp.id);
+                    }
+                  }} 
+                  className="p-2 text-red-500 bg-red-500/10 border border-red-500/20 rounded-xl transition-all"
+                >
+                  <Trash2 size={18} />
+                </button>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4 pt-2 border-t border-slate-50 dark:border-slate-800">
+            
+            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/5">
               <div className="space-y-1">
-                <span className="text-[10px] text-slate-400 dark:text-slate-500 uppercase font-bold flex items-center gap-1"><DollarSign size={10} /> مووچە</span>
-                <b className="text-emerald-600 dark:text-emerald-400">{emp.salary.toLocaleString()}</b>
+                <p className="text-[10px] font-black theme-muted uppercase tracking-widest flex items-center gap-1"><DollarSign size={10} /> مووچە</p>
+                <p className="text-sm font-black text-white">{emp.salary.toLocaleString()}</p>
               </div>
               <div className="space-y-1">
-                <span className="text-[10px] text-slate-400 dark:text-slate-500 uppercase font-bold flex items-center gap-1"><Calendar size={10} /> دەستپێک</span>
-                <b className="text-slate-600 dark:text-slate-400">{emp.joinDate}</b>
+                <p className="text-[10px] font-black theme-muted uppercase tracking-widest flex items-center gap-1"><Calendar size={10} /> دەستپێک</p>
+                <p className="text-sm font-black text-white">{emp.joinDate}</p>
               </div>
             </div>
-            <button onClick={() => handlePayment(emp)} disabled={emp.status !== 'active'} className="w-full bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 p-3 rounded-2xl font-bold text-sm hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors disabled:opacity-50">
+            
+            <button onClick={() => handlePayment(emp)} disabled={emp.status !== 'active'} className="w-full bg-white/5 text-slate-400 py-4 rounded-2xl font-black text-sm hover:bg-emerald-500/10 hover:text-emerald-500 transition-all disabled:opacity-50 border border-white/5">
               پێدانی مووچە
             </button>
           </div>
         ))}
       </div>
 
-      <div className="mt-8 space-y-4">
-        <h3 className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2 px-2">
-          <DollarSign size={18} className="text-emerald-500" /> دوایین مووچە دراوەکان
+      <div className="mt-12 space-y-6">
+        <h3 className="text-xl font-black flex items-center gap-2 px-2">
+          <DollarSign size={20} className="text-emerald-500" /> دوایین مووچە دراوەکان
         </h3>
-        <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {employeePayments?.length === 0 ? (
-            <div className="p-8 text-center text-slate-400">هیچ مووچەیەک تۆمار نەکراوە</div>
-          ) : (
-            <div className="divide-y divide-slate-50 dark:divide-slate-800">
-              {employeePayments?.slice().reverse().map(p => (
-                <div key={p.id} className="p-4 flex justify-between items-center hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                  <div className="space-y-1">
-                    <span className="font-bold text-slate-700 dark:text-slate-200 block">{p.employeeName}</span>
-                    <span className="text-[10px] text-slate-400 dark:text-slate-500">{p.date} - {p.month}</span>
-                  </div>
-                  <b className="text-emerald-600 dark:text-emerald-400">{p.amount.toLocaleString()}</b>
-                </div>
-              ))}
+            <div className="col-span-full text-center py-20 bg-white/5 rounded-[3rem] border-2 border-dashed border-white/10">
+              <DollarSign size={48} className="mx-auto text-slate-700 mb-4 opacity-20" />
+              <p className="text-slate-500 font-bold">هیچ مووچەیەک تۆمار نەکراوە</p>
             </div>
+          ) : (
+            employeePayments?.slice().reverse().map(p => (
+              <div key={p.id} className="p-5 bg-white/5 border border-white/10 rounded-3xl flex justify-between items-center hover:bg-white/10 transition-all group">
+                <div className="space-y-1">
+                  <span className="font-black text-sm text-white block">{p.employeeName}</span>
+                  <span className="text-[10px] font-bold theme-muted">{p.date} - {p.month}</span>
+                </div>
+                <div className="text-left">
+                  <b className="text-lg font-black text-emerald-500">{p.amount.toLocaleString()}</b>
+                </div>
+              </div>
+            ))
           )}
         </div>
       </div>

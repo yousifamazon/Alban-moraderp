@@ -8,21 +8,25 @@ import {
   FileText, 
   Wallet, 
   CheckCircle2,
-  Printer
+  Printer,
+  Trash2,
+  TrendingDown
 } from 'lucide-react';
 import { Expense } from '../../types';
 import { toast } from 'sonner';
+import { customConfirm } from '../../lib/utils';
 
 interface SpendingViewProps {
   expenses: Expense[];
   currency: string;
   darkMode: boolean;
   onSave: (expense: { id: number; description: string; amount: number; date: string }) => void;
+  onDelete: (id: number) => void;
   onPrint: (title: string, content: string) => void;
   onBack: () => void;
 }
 
-export function SpendingView({ expenses, currency, darkMode, onSave, onPrint, onBack }: SpendingViewProps) {
+export function SpendingView({ expenses, currency, darkMode, onSave, onDelete, onPrint, onBack }: SpendingViewProps) {
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -159,6 +163,49 @@ export function SpendingView({ expenses, currency, darkMode, onSave, onPrint, on
         <div>
           <h4 className="font-black text-slate-800 dark:text-slate-100">ئاگاداری</h4>
           <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">هەموو خەرجییەکان لە کۆی قازانجی گشتی دەردەکرێن بۆ ئەوەی قازانجی سافی بە دروستی هەژمار بکرێت.</p>
+        </div>
+      </div>
+
+      <div className="mt-12 space-y-6">
+        <h3 className="font-black text-xl px-2">دوایین خەرجییەکان</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {expenses.slice().reverse().map(expense => (
+            <div key={expense.id} className="item-card group">
+              <div className="flex justify-between items-start">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-red-500/10 text-red-500 flex items-center justify-center">
+                    <TrendingDown size={20} />
+                  </div>
+                  <div>
+                    <p className="font-black text-sm text-white">{expense.description}</p>
+                    <p className="text-[10px] theme-muted font-bold flex items-center gap-1 mt-1">
+                      <Calendar size={10} /> {expense.date}
+                    </p>
+                  </div>
+                </div>
+                <button 
+                  onClick={async () => {
+                    if (await customConfirm('ئایا دڵنیایت لە سڕینەوەی ئەم خەرجییە؟')) {
+                      onDelete(expense.id);
+                    }
+                  }}
+                  className="p-2 bg-white/5 hover:bg-red-500/20 text-slate-400 hover:text-red-500 rounded-xl transition-all"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+              <div className="pt-4 border-t border-white/5 flex justify-between items-center">
+                <span className="text-[10px] font-black theme-muted uppercase tracking-widest">بڕی پارە</span>
+                <span className="text-lg font-black text-red-500">{expense.amount.toLocaleString()} {currency}</span>
+              </div>
+            </div>
+          ))}
+          {expenses.length === 0 && (
+            <div className="col-span-full text-center py-20 bg-white/5 rounded-[3rem] border-2 border-dashed border-white/10">
+              <TrendingDown size={48} className="mx-auto text-slate-700 mb-4 opacity-20" />
+              <p className="text-slate-500 font-bold">هیچ خەرجییەک تۆمار نەکراوە</p>
+            </div>
+          )}
         </div>
       </div>
     </motion.div>

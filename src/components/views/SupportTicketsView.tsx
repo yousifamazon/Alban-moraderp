@@ -72,34 +72,54 @@ export function SupportTicketsView({ tickets, customers, onSave, onUpdate, onBac
         </div>
       )}
 
-      <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {tickets.map(t => (
-          <div key={t.id} className="bg-white dark:bg-slate-900 p-5 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
-            <div className="flex justify-between items-start mb-2">
-              <h3 className="font-bold text-slate-800 dark:text-slate-100">{t.subject}</h3>
-              <div className="flex gap-2">
-                <span className={cn("text-[10px] px-2 py-1 rounded-full font-bold", 
-                  t.priority === 'high' ? "bg-red-100 text-red-700" : 
-                  t.priority === 'medium' ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700"
+          <div key={t.id} className="item-card group">
+            <div className="flex justify-between items-start">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-sky-500">
+                  <Plus size={20} className="rotate-45" />
+                </div>
+                <div>
+                  <h3 className="font-black text-sm text-white">{t.subject}</h3>
+                  <p className="text-[10px] font-bold theme-muted mt-1">
+                    {new Date(t.createdAt).toLocaleDateString('ku-IQ')}
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-col items-end gap-2">
+                <span className={cn("text-[8px] px-2 py-1 rounded-full font-black uppercase border", 
+                  t.priority === 'high' ? "bg-red-500/10 text-red-500 border-red-500/20" : 
+                  t.priority === 'medium' ? "bg-amber-500/10 text-amber-500 border-amber-500/20" : "bg-blue-500/10 text-blue-500 border-blue-500/20"
                 )}>
                   {t.priority === 'high' ? 'بەرز' : t.priority === 'medium' ? 'مامناوەند' : 'نزم'}
                 </span>
-                <select value={t.status} onChange={e => onUpdate({...t, status: e.target.value as any})} className="text-[10px] px-2 py-1 rounded-full font-bold outline-none bg-sky-100 text-sky-700">
+                <select 
+                  value={t.status} 
+                  onChange={e => onUpdate({...t, status: e.target.value as any})} 
+                  className="text-[8px] px-2 py-1 rounded-full font-black outline-none bg-white/5 border border-white/10 text-sky-500"
+                >
                   <option value="open">کراوە</option>
-                  <option value="in-progress">لە کارکردندایە</option>
-                  <option value="resolved">چارەسەرکراوە</option>
-                  <option value="closed">داخراوە</option>
+                  <option value="in-progress">لە کارکردن</option>
+                  <option value="resolved">چارەسەرکراو</option>
+                  <option value="closed">داخراو</option>
                 </select>
               </div>
             </div>
-            <p className="text-sm text-slate-500 mb-2">{t.description}</p>
-            <div className="flex justify-between items-center text-[10px] text-slate-400">
+            
+            <p className="text-[10px] font-bold theme-muted mt-4 line-clamp-2">{t.description}</p>
+            
+            <div className="flex justify-between items-center text-[10px] font-black theme-muted pt-4 border-t border-white/5 mt-auto">
               <span>کڕیار: {customers.find(c => c.id === t.customerId)?.name || 'گشتی'}</span>
-              <span>{new Date(t.createdAt).toLocaleString('ku-IQ')}</span>
             </div>
           </div>
         ))}
-        {tickets.length === 0 && <div className="text-center py-12 text-slate-400">هیچ تیکێتێک نییە</div>}
+        {tickets.length === 0 && (
+          <div className="col-span-full text-center py-20 bg-white/5 rounded-[3rem] border-2 border-dashed border-white/10">
+            <Plus size={48} className="mx-auto text-slate-700 mb-4 opacity-20" />
+            <p className="text-slate-500 font-bold">هیچ تیکێتێک نییە</p>
+          </div>
+        )}
       </div>
     </motion.div>
   );

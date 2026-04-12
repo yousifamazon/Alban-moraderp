@@ -20,15 +20,17 @@ import {
 } from 'lucide-react';
 import { ERPData, Farmer, MilkCollection } from '../../types';
 import { toast } from 'sonner';
-import { cn } from '../../lib/utils';
+import { cn, customConfirm } from '../../lib/utils';
 
 interface MilkCollectionViewProps {
   data: ERPData;
   onUpdateData: (newData: ERPData) => void;
+  saveToFirebase: (colName: string, item: any) => void;
+  deleteFromFirebase: (colName: string, id: string | number) => void;
   onBack: () => void;
 }
 
-export function MilkCollectionView({ data, onUpdateData, onBack }: MilkCollectionViewProps) {
+export function MilkCollectionView({ data, onUpdateData, saveToFirebase, deleteFromFirebase, onBack }: MilkCollectionViewProps) {
   const [activeTab, setActiveTab] = useState<'collections' | 'farmers' | 'history'>('collections');
   const [isAddingFarmer, setIsAddingFarmer] = useState(false);
   const [editingFarmerId, setEditingFarmerId] = useState<number | null>(null);
@@ -63,13 +65,17 @@ export function MilkCollectionView({ data, onUpdateData, onBack }: MilkCollectio
     }
 
     if (editingFarmerId) {
-      const updatedFarmers = farmers.map(f => 
-        f.id === editingFarmerId 
-          ? { ...f, name: newFarmer.name!, phone: newFarmer.phone!, address: newFarmer.address, milkPrice: newFarmer.milkPrice || 1000 }
-          : f
-      );
+      const updatedFarmer = { 
+        ...farmers.find(f => f.id === editingFarmerId)!, 
+        name: newFarmer.name!, 
+        phone: newFarmer.phone!, 
+        address: newFarmer.address, 
+        milkPrice: newFarmer.milkPrice || 1000 
+      };
+      const updatedFarmers = farmers.map(f => f.id === editingFarmerId ? updatedFarmer : f);
       const newData = { ...data, farmers: updatedFarmers };
       onUpdateData(newData);
+      saveToFirebase('farmers', updatedFarmer);
       toast.success('زانیارییەکان نوێکرانەوە');
     } else {
       const farmer: Farmer = {
@@ -82,6 +88,7 @@ export function MilkCollectionView({ data, onUpdateData, onBack }: MilkCollectio
 
       const newData = { ...data, farmers: [...farmers, farmer] };
       onUpdateData(newData);
+      saveToFirebase('farmers', farmer);
       toast.success('فەلاحی نوێ زیادکرا');
     }
 
@@ -124,25 +131,42 @@ export function MilkCollectionView({ data, onUpdateData, onBack }: MilkCollectio
 
     const newData = { ...data, milkCollections: [collection, ...collections] };
     onUpdateData(newData);
+    saveToFirebase('milkCollections', collection);
     setIsAddingCollection(false);
     setNewCollection({ farmerId: 0, quantity: 0, pricePerLiter: 0, date: new Date().toISOString().split('T')[0], status: 'collected', note: '' });
     toast.success('کۆکردنەوەی شیر تۆمارکرا');
   };
 
-  const handleDeleteFarmer = (id: number) => {
-    if (window.confirm('ئایا دڵنیایت لە سڕینەوەی ئەم فەلاحە؟')) {
+  const handleDeleteFarmer = async (id: number) => {
+    if (await customConfirm('ئایا دڵنیایت لە سڕینەوەی ئەم فەلاحە؟')) {
       const newData = { ...data, farmers: farmers.filter(f => f.id !== id) };
       onUpdateData(newData);
+      deleteFromFirebase('farmers', id);
       toast.success('فەلاحەکە سڕایەوە');
     }
   };
 
-  const updateCollectionStatus = (id: number, status: 'collected' | 'delivered') => {
+  const handleDeleteCollection = (id: number) => {
     const newData = {
       ...data,
-      milkCollections: collections.map(c => c.id === id ? { ...c, status } : c)
+      milkCollections: collections.filter(c => c.id !== id)
     };
     onUpdateData(newData);
+    deleteFromFirebase('milkCollections', id);
+    toast.success('تۆمارەکە سڕایەوە');
+  };
+
+  const updateCollectionStatus = (id: number, status: 'collected' | 'delivered') => {
+    const collection = collections.find(c => c.id === id);
+    if (!collection) return;
+    
+    const updatedCollection = { ...collection, status };
+    const newData = {
+      ...data,
+      milkCollections: collections.map(c => c.id === id ? updatedCollection : c)
+    };
+    onUpdateData(newData);
+    saveToFirebase('milkCollections', updatedCollection);
     toast.success(status === 'delivered' ? 'گەیاندن بۆ کارگە تۆمارکرا' : 'بۆ باری کۆکراوە گەڕێندرایەوە');
   };
 
@@ -293,6 +317,17 @@ export function MilkCollectionView({ data, onUpdateData, onBack }: MilkCollectio
                           <CheckCircle2 size={18} />
                         </button>
                       )}
+                      <button 
+                        onClick={async () => {
+                          if (await customConfirm("ئایا دڵنیایت لە سڕینەوەی ئەم تۆمارە؟")) {
+                            handleDeleteCollection(collection.id);
+                          }
+                        }}
+                        className="p-3 rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-all"
+                        title="سڕینەوە"
+                      >
+                        <Trash2 size={18} />
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -451,47 +486,58 @@ export function MilkCollectionView({ data, onUpdateData, onBack }: MilkCollectio
         )}
 
         {activeTab === 'history' && (
-          <div className="bg-slate-900 rounded-[2.5rem] border border-white/10 shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-right border-collapse">
-                <thead>
-                  <tr className="bg-white/5">
-                    <th className="p-6 text-[10px] font-black theme-muted uppercase tracking-widest">فەلاح</th>
-                    <th className="p-6 text-[10px] font-black theme-muted uppercase tracking-widest">بڕ (لیتر)</th>
-                    <th className="p-6 text-[10px] font-black theme-muted uppercase tracking-widest">نرخ</th>
-                    <th className="p-6 text-[10px] font-black theme-muted uppercase tracking-widest">کۆی گشتی</th>
-                    <th className="p-6 text-[10px] font-black theme-muted uppercase tracking-widest">ڕێکەوت</th>
-                    <th className="p-6 text-[10px] font-black theme-muted uppercase tracking-widest">بارودۆخ</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/5">
-                  {collections.map(collection => (
-                    <tr key={collection.id} className="hover:bg-white/5 transition-all">
-                      <td className="p-6">
-                        <div className="font-black text-sm">{collection.farmerName}</div>
-                      </td>
-                      <td className="p-6 font-bold text-sm">{collection.quantity}</td>
-                      <td className="p-6 font-bold text-sm">{collection.pricePerLiter.toLocaleString()}</td>
-                      <td className="p-6 font-black text-sm">{collection.totalPrice.toLocaleString()}</td>
-                      <td className="p-6">
-                        <div className="flex items-center gap-2 text-xs font-bold text-slate-400">
-                          <Calendar size={14} />
-                          {collection.date}
-                        </div>
-                      </td>
-                      <td className="p-6">
-                        <span className={cn(
-                          "text-[8px] font-black uppercase px-2 py-1 rounded-full",
-                          collection.status === 'delivered' ? "bg-emerald-500/10 text-emerald-500" : "bg-amber-500/10 text-amber-500"
-                        )}>
-                          {collection.status === 'delivered' ? 'گەیشتووە' : 'کۆکراوەتەوە'}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {collections.map(collection => (
+              <div key={collection.id} className="item-card group">
+                <div className="flex justify-between items-start">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-blue-500">
+                      <User size={20} />
+                    </div>
+                    <div>
+                      <h4 className="font-black text-sm text-white">{collection.farmerName}</h4>
+                      <p className="text-[10px] font-bold theme-muted flex items-center gap-1">
+                        <Calendar size={10} /> {collection.date}
+                      </p>
+                    </div>
+                  </div>
+                  <span className={cn(
+                    "text-[8px] font-black uppercase px-2 py-1 rounded-full",
+                    collection.status === 'delivered' ? "bg-emerald-500/10 text-emerald-500" : "bg-amber-500/10 text-amber-500"
+                  )}>
+                    {collection.status === 'delivered' ? 'گەیشتووە' : 'کۆکراوەتەوە'}
+                  </span>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/5">
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-black theme-muted uppercase tracking-widest">بڕ (لیتر)</p>
+                    <p className="text-sm font-black text-white">{collection.quantity}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-black theme-muted uppercase tracking-widest">نرخی لیتر</p>
+                    <p className="text-sm font-black text-white">{collection.pricePerLiter.toLocaleString()}</p>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-white/5 flex justify-between items-center">
+                  <span className="text-[10px] font-black theme-muted uppercase tracking-widest">کۆی گشتی</span>
+                  <span className="text-lg font-black text-blue-500">{collection.totalPrice.toLocaleString()} دینار</span>
+                </div>
+                
+                {collection.note && (
+                  <div className="mt-2 p-3 bg-white/5 rounded-xl text-[10px] font-bold theme-muted italic">
+                    {collection.note}
+                  </div>
+                )}
+              </div>
+            ))}
+            {collections.length === 0 && (
+              <div className="col-span-full text-center py-20 bg-slate-50 dark:bg-slate-800/50 rounded-[3rem] border-2 border-dashed border-slate-200 dark:border-slate-700">
+                <History size={48} className="mx-auto text-slate-300 mb-4" />
+                <p className="text-slate-400 font-bold">هیچ مێژوویەک نییە</p>
+              </div>
+            )}
           </div>
         )}
       </div>

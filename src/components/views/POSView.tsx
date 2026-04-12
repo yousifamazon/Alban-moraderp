@@ -19,7 +19,7 @@ import {
   Receipt
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Product, Customer, Sale, CustomField } from '../../types';
+import { Product, Customer, Sale, CustomField, User as UserType } from '../../types';
 import { cn } from '../../lib/utils';
 import { PrintableInvoice } from '../PrintableInvoice';
 
@@ -27,6 +27,7 @@ interface POSViewProps {
   products: Product[];
   customers: Customer[];
   sales: Sale[];
+  currentUser: UserType;
   currency: string;
   invoiceTemplate?: string;
   customFields?: CustomField[];
@@ -36,7 +37,7 @@ interface POSViewProps {
   onBack: () => void;
 }
 
-export function POSView({ products, customers, sales, currency, invoiceTemplate, customFields = [], onSaveSale, onOpenReturns, onNavigate, onBack }: POSViewProps) {
+export function POSView({ products, customers, sales, currentUser, currency, invoiceTemplate, customFields = [], onSaveSale, onOpenReturns, onNavigate, onBack }: POSViewProps) {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [generalCustomerName, setGeneralCustomerName] = useState('');
   const [generalCustomerPhone, setGeneralCustomerPhone] = useState('');
@@ -125,6 +126,16 @@ export function POSView({ products, customers, sales, currency, invoiceTemplate,
 
     const total = calculateTotal();
     
+    // Check Discount Permission
+    const hasDiscount = orderItems.some(item => {
+      const product = products.find(p => p.id === item.productId);
+      return product && product.discount && product.discount > 0;
+    });
+
+    if (hasDiscount && currentUser.role !== 'admin' && currentUser.permissions && !currentUser.permissions.canGiveDiscount) {
+      return toast.error("ببورە، تۆ دەسەڵاتی پێدانی داشکانت نییە");
+    }
+
     // Check credit limit
     if (paymentMethod === 'qist' && selectedCustomer && selectedCustomer.creditLimit) {
       const currentDebt = selectedCustomer.debt || 0;

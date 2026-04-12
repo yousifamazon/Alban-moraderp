@@ -84,19 +84,29 @@ export function JardView({ products, onPrint, onBack }: JardViewProps) {
           />
         </div>
 
-        <div className="max-h-[60vh] overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.length === 0 ? (
-            <div className="text-center py-8 text-slate-400">هیچ کاڵایەک نەدۆزرایەوە</div>
+            <div className="col-span-full text-center py-20 bg-white/5 rounded-[3rem] border-2 border-dashed border-white/10">
+              <Search size={48} className="mx-auto text-slate-700 mb-4 opacity-20" />
+              <p className="text-slate-500 font-bold">هیچ کاڵایەک نەدۆزرایەوە</p>
+            </div>
           ) : (
             filtered.map(p => (
-              <div key={p.id} className="flex justify-between items-center p-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl hover:border-blue-200 dark:hover:border-blue-900 transition-colors">
-                <div className="space-y-1">
-                  <span className="font-bold text-slate-700 dark:text-slate-200 block">{p.name}</span>
-                  <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">{p.barcode}</span>
-                </div>
-                <div className="flex flex-col items-end">
-                  <span className="text-[10px] text-slate-400 dark:text-slate-500 uppercase font-bold">بڕی سیستەم</span>
-                  <b className="text-blue-600 dark:text-blue-400 text-lg">{p.stock}</b>
+              <div key={p.id} className="item-card group">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-blue-500">
+                      <Search size={20} />
+                    </div>
+                    <div>
+                      <h3 className="font-black text-sm text-white">{p.name}</h3>
+                      <p className="text-[10px] theme-muted font-bold mt-1 font-mono">{p.barcode}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[8px] font-black theme-muted uppercase tracking-widest block mb-1">بڕی سیستەم</span>
+                    <b className="text-blue-500 text-lg">{p.stock}</b>
+                  </div>
                 </div>
               </div>
             ))

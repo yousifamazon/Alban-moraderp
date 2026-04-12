@@ -19,14 +19,23 @@ export function DiscountsView({ products, currency, onBack }: DiscountsViewProps
         <button onClick={onBack} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full"><ChevronLeft /></button>
         <h2 className="font-bold text-lg text-rose-500 dark:text-rose-400">داشکانی کاڵاکان</h2>
       </div>
-      <div className="space-y-2">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {!discounted || discounted.length === 0 ? (
-          <div className="text-center p-12 text-slate-400 dark:text-slate-600">هیچ داشکانێک نییە</div>
+          <div className="col-span-full text-center py-20 bg-white/5 rounded-[3rem] border-2 border-dashed border-white/10">
+            <p className="text-slate-500 font-bold">هیچ داشکانێک نییە</p>
+          </div>
         ) : (
           discounted?.map(p => (
-            <div key={p.id} className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm flex justify-between items-center border border-slate-50 dark:border-slate-800">
-              <b className="text-slate-700 dark:text-slate-200">{p.name}</b>
-              <span className="text-rose-500 dark:text-rose-400 font-bold">-{p.discount?.toLocaleString()} {currency}</span>
+            <div key={p.id} className="item-card group">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-500 flex items-center justify-center">
+                    <span className="font-black text-lg">%</span>
+                  </div>
+                  <h3 className="font-black text-sm text-white">{p.name}</h3>
+                </div>
+                <span className="text-rose-500 font-black text-lg">-{p.discount?.toLocaleString()} {currency}</span>
+              </div>
             </div>
           ))
         )}

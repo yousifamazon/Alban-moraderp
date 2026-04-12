@@ -116,28 +116,40 @@ export function RecipesView({ recipes, products, onSave, onBack }: RecipesViewPr
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {recipes.map(r => (
-          <div key={r.id} className="bg-white dark:bg-slate-900 p-5 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/30 rounded-xl flex items-center justify-center text-orange-600">
-                <ChefHat size={20} />
+          <div key={r.id} className="item-card group">
+            <div className="flex items-center gap-4 mb-6">
+              <div className="w-14 h-14 rounded-2xl bg-orange-500/10 text-orange-500 flex items-center justify-center group-hover:bg-orange-500 group-hover:text-white transition-all">
+                <ChefHat size={28} />
               </div>
               <div>
-                <h3 className="font-bold text-slate-800 dark:text-slate-100">{r.name}</h3>
-                <p className="text-[10px] text-slate-500">بەرهەمی کۆتایی: {products.find(p => p.id === r.finishedProductId)?.name}</p>
+                <h3 className="font-black text-lg text-white">{r.name}</h3>
+                <p className="text-[10px] font-bold theme-muted uppercase tracking-widest mt-1">
+                  بەرهەمی کۆتایی: {products.find(p => p.id === r.finishedProductId)?.name}
+                </p>
               </div>
             </div>
-            <div className="space-y-1">
-              {r.items.map((item, idx) => (
-                <div key={idx} className="flex justify-between text-xs text-slate-500">
-                  <span>{item.itemName}</span>
-                  <span className="font-bold">{item.quantity}</span>
-                </div>
-              ))}
+            
+            <div className="space-y-3 pt-4 border-t border-white/5">
+              <p className="text-[10px] font-black theme-muted uppercase tracking-widest mb-2">پێکهاتەکان</p>
+              <div className="grid grid-cols-1 gap-2">
+                {r.items.map((item, idx) => (
+                  <div key={idx} className="flex justify-between items-center p-3 bg-white/5 rounded-xl border border-white/5">
+                    <span className="text-xs font-bold text-slate-300">{item.itemName}</span>
+                    <span className="text-xs font-black text-orange-500">{item.quantity}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         ))}
+        {recipes.length === 0 && (
+          <div className="col-span-full text-center py-20 bg-white/5 rounded-[3rem] border-2 border-dashed border-white/10">
+            <ChefHat size={48} className="mx-auto text-slate-700 mb-4 opacity-20" />
+            <p className="text-slate-500 font-bold">هیچ ڕەچەتەیەک تۆمار نەکراوە</p>
+          </div>
+        )}
       </div>
     </motion.div>
   );

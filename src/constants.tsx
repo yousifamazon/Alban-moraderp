@@ -24,6 +24,7 @@ import {
   TrendingUp, 
   ClipboardCheck, 
   Database, 
+  Warehouse as WarehouseIcon,
   PackageOpen, 
   BookOpen, 
   Settings as SettingsIcon, 
@@ -34,44 +35,58 @@ import {
   Megaphone,
   Ticket,
   Download,
-  Milk
+  Milk,
+  Scale
 } from 'lucide-react';
 
 export const MENU_CATEGORIES = [
-  { id: 'sales_customers', label: 'فرۆشتن و کڕیاران', icon: <ShoppingCart size={16} /> },
-  { id: 'inventory_production', label: 'کۆگا و بەرهەمهێنان', icon: <PackageOpen size={16} /> },
-  { id: 'livestock_milk', label: 'ئاژەڵداری و شیر', icon: <Milk size={16} /> },
+  { id: 'inventory_setup', label: 'کۆگا و ئامادەکاری', icon: <PackageOpen size={16} /> },
+  { id: 'production', label: 'بەرهەمهێنان', icon: <Factory size={16} /> },
+  { id: 'sales_logistics', label: 'فرۆشتن و گواستنەوە', icon: <ShoppingCart size={16} /> },
   { id: 'finance', label: 'دارایی و خەرجی', icon: <Wallet size={16} /> },
-  { id: 'hr_drivers', label: 'کارمەندان و شۆفێران', icon: <Users size={16} /> },
+  { id: 'livestock_milk', label: 'ئاژەڵداری و شیر', icon: <Milk size={16} /> },
   { id: 'reports', label: 'ڕاپۆرت و شیکاری', icon: <PieChartIcon size={16} /> },
   { id: 'system', label: 'ڕێکخستنی سیستەم', icon: <SettingsIcon size={16} /> },
 ];
 
 export const MENU_ITEMS: { id: string; label: string; icon: React.ReactNode; category: string }[] = [
-  // Sales & Customers
-  { id: 'pos', label: 'فرۆشتن (POS)', icon: <ShoppingCart className="text-emerald-500" />, category: 'sales_customers' },
-  { id: 'returns', label: 'گەڕاندنەوەی کاڵا', icon: <RotateCcw className="text-orange-500" />, category: 'sales_customers' },
-  { id: 'customer-mgmt', label: 'بەڕێوەبردنی کڕیار', icon: <Users className="text-blue-600" />, category: 'sales_customers' },
-  { id: 'customer-list', label: 'لیستی کڕیار', icon: <Users className="text-blue-500" />, category: 'sales_customers' },
-  { id: 'customer-loyalty', label: 'خاڵەکانی کڕیار', icon: <HandCoins className="text-yellow-500" />, category: 'sales_customers' },
-  { id: 'shop-request', label: 'داواکاری دوکان', icon: <ShoppingCart className="text-emerald-500" />, category: 'sales_customers' },
-  { id: 'shop-request-mgmt', label: 'بەڕێوەبردنی داواکاری دوکان', icon: <ShoppingCart className="text-blue-500" />, category: 'sales_customers' },
-  { id: 'sales-history', label: 'وەسڵەکان', icon: <Receipt className="text-teal-600" />, category: 'sales_customers' },
-  { id: 'payments', label: 'وەسڵی کردراو', icon: <CheckCheck className="text-blue-400" />, category: 'sales_customers' },
+  // Inventory & Setup
+  { id: 'cat-mgmt', label: 'بەڕێوەبردنی بەش', icon: <LayoutGrid className="text-pink-500" />, category: 'inventory_setup' },
+  { id: 'warehouse-mgmt', label: 'بەڕێوەبردنی کۆگا', icon: <WarehouseIcon className="text-emerald-600" />, category: 'inventory_setup' },
+  { id: 'add-product', label: 'کاڵای نوێ', icon: <Plus className="text-blue-500" />, category: 'inventory_setup' },
+  { id: 'product-list', label: 'لیستی کاڵا', icon: <List className="text-purple-500" />, category: 'inventory_setup' },
+  { id: 'barcode-gen', label: 'بارکۆد', icon: <Barcode className="text-slate-700" />, category: 'inventory_setup' },
+  { id: 'shelf-label', label: 'لایبڵی ڕەفە', icon: <Tag className="text-orange-500" />, category: 'inventory_setup' },
+  { id: 'low-stock', label: 'کەشفی کەمبوو', icon: <TrendingDown className="text-red-400" />, category: 'inventory_setup' },
+  { id: 'bulk-import', label: 'هاوردەکردن (Excel)', icon: <Download className="text-emerald-500" />, category: 'inventory_setup' },
+  { id: 'jard', label: 'جەرد کردن', icon: <ClipboardCheck className="text-slate-700" />, category: 'inventory_setup' },
 
-  // Inventory & Production
-  { id: 'add-product', label: 'کاڵای نوێ', icon: <Plus className="text-blue-500" />, category: 'inventory_production' },
-  { id: 'product-list', label: 'لیستی کاڵا', icon: <List className="text-purple-500" />, category: 'inventory_production' },
-  { id: 'purchase-orders', label: 'داواکاری کڕین (PO)', icon: <ShoppingCart className="text-indigo-500" />, category: 'inventory_production' },
-  { id: 'waste-log', label: 'بەهەدەردراو', icon: <Trash2 className="text-red-500" />, category: 'inventory_production' },
-  { id: 'supplies', label: 'پێداویستی', icon: <PackageOpen className="text-orange-400" />, category: 'inventory_production' },
-  { id: 'jard', label: 'جەرد کردن', icon: <ClipboardCheck className="text-slate-700" />, category: 'inventory_production' },
-  { id: 'recipes', label: 'ڕەچەتەکان', icon: <List className="text-orange-500" />, category: 'inventory_production' },
-  { id: 'production', label: 'بەرهەمهێنان', icon: <Factory className="text-blue-600" />, category: 'inventory_production' },
-  { id: 'bulk-import', label: 'هاوردەکردن (Excel)', icon: <Download className="text-emerald-500" />, category: 'inventory_production' },
-  { id: 'barcode-gen', label: 'بارکۆد', icon: <Barcode className="text-slate-700" />, category: 'inventory_production' },
-  { id: 'shelf-label', label: 'لایبڵی ڕەفە', icon: <Tag className="text-orange-500" />, category: 'inventory_production' },
-  { id: 'cat-mgmt', label: 'بەڕێوەبردنی بەش', icon: <LayoutGrid className="text-pink-500" />, category: 'inventory_production' },
+  // Production
+  { id: 'recipes', label: 'ڕەچەتەکان', icon: <List className="text-orange-500" />, category: 'production' },
+  { id: 'production', label: 'بەرهەمهێنان', icon: <Factory className="text-blue-600" />, category: 'production' },
+  { id: 'supplies', label: 'پێداویستی', icon: <PackageOpen className="text-orange-400" />, category: 'production' },
+
+  // Sales & Logistics
+  { id: 'pos', label: 'فرۆشتن (POS)', icon: <ShoppingCart className="text-emerald-500" />, category: 'sales_logistics' },
+  { id: 'sales-history', label: 'وەسڵەکان', icon: <Receipt className="text-teal-600" />, category: 'sales_logistics' },
+  { id: 'returns', label: 'گەڕاندنەوەی کاڵا', icon: <RotateCcw className="text-orange-500" />, category: 'sales_logistics' },
+  { id: 'customer-mgmt', label: 'بەڕێوەبردنی کڕیار', icon: <Users className="text-blue-600" />, category: 'sales_logistics' },
+  { id: 'customer-list', label: 'لیستی کڕیار', icon: <Users className="text-blue-500" />, category: 'sales_logistics' },
+  { id: 'customer-loyalty', label: 'خاڵەکانی کڕیار', icon: <HandCoins className="text-yellow-500" />, category: 'sales_logistics' },
+  { id: 'drivers', label: 'شۆفێرەکان', icon: <Users className="text-amber-600" />, category: 'sales_logistics' },
+  { id: 'vehicles', label: 'ئۆتۆمبێلەکان', icon: <Car className="text-teal-500" />, category: 'sales_logistics' },
+  { id: 'shop-request', label: 'داواکاری دوکان', icon: <ShoppingCart className="text-emerald-500" />, category: 'sales_logistics' },
+  { id: 'shop-request-mgmt', label: 'بەڕێوەبردنی داواکاری دوکان', icon: <ShoppingCart className="text-blue-500" />, category: 'sales_logistics' },
+
+  // Finance
+  { id: 'shift-mgmt', label: 'سندوق و شەفت', icon: <Wallet className="text-emerald-600" />, category: 'finance' },
+  { id: 'spending', label: 'خەرجی', icon: <Wallet className="text-red-600" />, category: 'finance' },
+  { id: 'payments', label: 'وەسڵی کردراو', icon: <CheckCheck className="text-blue-400" />, category: 'finance' },
+  { id: 'debt-in', label: 'وەرگرتنی قەرز', icon: <HandCoins className="text-green-600" />, category: 'finance' },
+  { id: 'factory-debt', label: 'قەرزی کارگە', icon: <Factory className="text-slate-600" />, category: 'finance' },
+  { id: 'suppliers-mgmt', label: 'بەڕێوەبردنی دابینکەر', icon: <Users className="text-blue-500" />, category: 'finance' },
+  { id: 'assets', label: 'سەرمایەکان', icon: <Database className="text-emerald-600" />, category: 'finance' },
+  { id: 'hr-mgmt', label: 'کارمەندان و مووچە', icon: <Users className="text-teal-600" />, category: 'finance' },
 
   // Livestock & Milk
   { id: 'livestock-mgmt', label: 'بەڕێوەبردنی ئاژەڵان', icon: <Users className="text-amber-600" />, category: 'livestock_milk' },
@@ -79,43 +94,29 @@ export const MENU_ITEMS: { id: string; label: string; icon: React.ReactNode; cat
   { id: 'milk-collection', label: 'کۆکردنەوەی شیر', icon: <Milk className="text-blue-500" />, category: 'livestock_milk' },
   { id: 'health-log', label: 'تۆماری تەندروستی', icon: <ClipboardCheck className="text-red-500" />, category: 'livestock_milk' },
 
-  // Finance & Expenses
-  { id: 'shift-mgmt', label: 'سندوق و شەفت', icon: <Wallet className="text-emerald-600" />, category: 'finance' },
-  { id: 'spending', label: 'خەرجی', icon: <Wallet className="text-red-600" />, category: 'finance' },
-  { id: 'debt-in', label: 'وەرگرتنی قەرز', icon: <HandCoins className="text-green-600" />, category: 'finance' },
-  { id: 'factory-debt', label: 'قەرزی کارگە', icon: <Factory className="text-slate-600" />, category: 'finance' },
-  { id: 'assets', label: 'سەرمایەکان', icon: <Database className="text-emerald-600" />, category: 'finance' },
-
-  // HR & Drivers
-  { id: 'hr-mgmt', label: 'کارمەندان و مووچە', icon: <Users className="text-teal-600" />, category: 'hr_drivers' },
-  { id: 'vehicles', label: 'ئۆتۆمبێلەکان', icon: <Car className="text-teal-500" />, category: 'hr_drivers' },
-  { id: 'drivers', label: 'شۆفێرەکان', icon: <Users className="text-amber-600" />, category: 'hr_drivers' },
-
-  // Reports & Analytics
+  // Reports
   { id: 'advanced-dashboard', label: 'داشبۆردی پێشکەوتوو', icon: <PieChartIcon className="text-indigo-600" />, category: 'reports' },
   { id: 'reports-hub', label: 'هەموو ڕاپۆرتەکان', icon: <LayoutGrid className="text-indigo-600" />, category: 'reports' },
-  { id: 'qist-dash', label: 'داشبۆردی قیست', icon: <PieChartIcon className="text-indigo-500" />, category: 'reports' },
+  { id: 'profits-rep', label: 'قازانجەکان', icon: <BadgeDollarSign className="text-emerald-600" />, category: 'reports' },
+  { id: 'qist-rep', label: 'ڕاپۆرت یان قیست', icon: <TableProperties className="text-indigo-400" />, category: 'reports' },
+  { id: 'cash-rep', label: 'ڕاپۆرت یان پارە', icon: <TrendingUp className="text-teal-500" />, category: 'reports' },
+  { id: 'financial-statements', label: 'تەرازووی پێداچوونەوە', icon: <Scale className="text-emerald-600" />, category: 'reports' },
+  { id: 'cust-statement', label: 'کەشفی حیساب', icon: <FileText className="text-slate-500" />, category: 'reports' },
   { id: 'category-report', label: 'ڕاپۆرتی جۆرەکان', icon: <TrendingUp className="text-teal-500" />, category: 'reports' },
   { id: 'expense-report', label: 'ڕاپۆرتی خەرجی', icon: <TrendingDown className="text-orange-500" />, category: 'reports' },
   { id: 'qist-alerts', label: 'ئاگاداری', icon: <Bell className="text-yellow-500" />, category: 'reports' },
-  { id: 'low-stock', label: 'کەشفی کەمبوو', icon: <TrendingDown className="text-red-400" />, category: 'reports' },
   { id: 'discounts', label: 'داشکان', icon: <Percent className="text-rose-500" />, category: 'reports' },
   { id: 'expired', label: 'بەسەرچوو', icon: <CalendarX className="text-red-600" />, category: 'reports' },
-  { id: 'profits-rep', label: 'قازانجەکان', icon: <BadgeDollarSign className="text-emerald-600" />, category: 'reports' },
-  { id: 'qist-rep', label: 'ڕاپۆرتی قیست', icon: <TableProperties className="text-indigo-400" />, category: 'reports' },
-  { id: 'cash-rep', label: 'ڕاپۆرتی پارە', icon: <TrendingUp className="text-teal-500" />, category: 'reports' },
-  { id: 'cust-statement', label: 'کەشفی حیساب', icon: <FileText className="text-slate-500" />, category: 'reports' },
 
   // System Settings
-  { id: 'suppliers-mgmt', label: 'بەڕێوەبردنی دابینکەر', icon: <Users className="text-blue-500" />, category: 'system' },
+  { id: 'settings', label: 'ڕێکخستن', icon: <SettingsIcon className="text-slate-800" />, category: 'system' },
+  { id: 'user-mgmt', label: 'بەڕێوەبردنی بەکارهێنەران', icon: <Users className="text-indigo-500" />, category: 'system' },
+  { id: 'audit-logs', label: 'تۆماری چالاکییەکان', icon: <History className="text-slate-600" />, category: 'system' },
   { id: 'tasks', label: 'ئەرکەکان', icon: <CheckCheck className="text-indigo-500" />, category: 'system' },
   { id: 'projects', label: 'پڕۆژەکان', icon: <Briefcase className="text-purple-600" />, category: 'system' },
   { id: 'campaigns', label: 'کەمپەینەکان', icon: <Megaphone className="text-pink-500" />, category: 'system' },
   { id: 'tickets', label: 'تیکێتەکان', icon: <Ticket className="text-sky-500" />, category: 'system' },
-  { id: 'manual', label: 'بەکارهێنان', icon: <BookOpen className="text-blue-400" />, category: 'system' },
-  { id: 'user-mgmt', label: 'بەڕێوەبردنی بەکارهێنەران', icon: <Users className="text-indigo-500" />, category: 'system' },
-  { id: 'audit-logs', label: 'تۆماری چالاکییەکان', icon: <History className="text-slate-600" />, category: 'system' },
   { id: 'invoice-template', label: 'کلێشەی وەسڵ', icon: <FileText className="text-purple-600" />, category: 'system' },
   { id: 'system-customizer', label: 'ڕێکخستنی سیستەم (No-Code)', icon: <LayoutGrid className="text-emerald-500" />, category: 'system' },
-  { id: 'settings', label: 'ڕێکخستن', icon: <SettingsIcon className="text-slate-800" />, category: 'system' },
+  { id: 'manual', label: 'بەکارهێنان', icon: <BookOpen className="text-blue-400" />, category: 'system' },
 ];

@@ -86,21 +86,33 @@ export function CustStatementView({ sales, payments, currency, onPrint, onBack }
               <Printer size={18} /> پرنتکردنی کەشف
             </button>
 
-            <div className="space-y-2">
-              <h3 className="text-xs font-bold text-slate-400">جوڵەی حیساب:</h3>
-              {[...customerSales, ...customerPayments]
-                .sort((a, b) => b.id - a.id)
-                .map((item, idx) => (
-                  <div key={idx} className="p-3 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl flex justify-between items-center text-xs">
-                    <div>
-                      <span className="block font-bold">{'itemName' in item ? item.itemName : 'وەسڵی وەرگرتن'}</span>
-                      <span className="text-[10px] text-slate-400">{item.date}</span>
+            <div className="space-y-4">
+              <h3 className="text-[10px] font-black theme-muted uppercase tracking-widest px-2">جوڵەی حیساب</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[...customerSales, ...customerPayments]
+                  .sort((a, b) => b.id - a.id)
+                  .map((item, idx) => (
+                    <div key={idx} className="item-card group">
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-4">
+                          <div className={cn(
+                            "w-12 h-12 rounded-2xl flex items-center justify-center",
+                            'total' in item ? "bg-red-500/10 text-red-500" : "bg-emerald-500/10 text-emerald-500"
+                          )}>
+                            <span className="font-black text-lg">{'total' in item ? '-' : '+'}</span>
+                          </div>
+                          <div>
+                            <h3 className="font-black text-sm text-white">{'itemName' in item ? item.itemName : 'وەسڵی وەرگرتن'}</h3>
+                            <p className="text-[10px] theme-muted font-bold mt-1">{item.date}</p>
+                          </div>
+                        </div>
+                        <b className={cn("text-lg", 'total' in item ? "text-red-500" : "text-emerald-500")}>
+                          {('total' in item ? item.total : item.amount).toLocaleString()}
+                        </b>
+                      </div>
                     </div>
-                    <b className={'total' in item ? 'text-red-500' : 'text-green-500'}>
-                      {'total' in item ? `-${item.total.toLocaleString()}` : `+${item.amount.toLocaleString()}`}
-                    </b>
-                  </div>
-                ))}
+                  ))}
+              </div>
             </div>
           </div>
         )}

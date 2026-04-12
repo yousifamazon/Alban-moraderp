@@ -135,37 +135,46 @@ export function SuppliesView({ supplies, onSave, onBack }: SuppliesViewProps) {
           </div>
         </div>
 
-        <div className="lg:col-span-2 space-y-4">
+        <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
           {supplies.length === 0 ? (
-            <div className="bg-white dark:bg-slate-900 p-12 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800 text-center">
-              <Package size={48} className="mx-auto text-slate-300 dark:text-slate-700 mb-4" />
-              <p className="text-slate-500 dark:text-slate-400 font-bold">هیچ پێداویستییەک تۆمار نەکراوە</p>
+            <div className="col-span-full bg-white/5 p-12 rounded-[2.5rem] shadow-sm border-2 border-dashed border-white/10 text-center">
+              <Package size={48} className="mx-auto text-slate-700 mb-4 opacity-20" />
+              <p className="text-slate-500 font-bold">هیچ پێداویستییەک تۆمار نەکراوە</p>
             </div>
           ) : (
             supplies.map(s => (
-              <div key={s.id} className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-orange-50 dark:bg-orange-500/10 rounded-2xl flex items-center justify-center text-orange-500">
-                    <Package size={24} />
-                  </div>
-                  <div>
-                    <h4 className="font-black text-lg text-slate-800 dark:text-slate-100">{s.name}</h4>
-                    <div className="flex items-center gap-3 mt-1 text-xs font-bold text-slate-500">
-                      <span className="flex items-center gap-1">{getDestinationIcon(s.destination)} {getDestinationLabel(s.destination)}</span>
-                      <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-700" />
-                      <span className="flex items-center gap-1">{getSourceIcon(s.source)} {getSourceLabel(s.source)}</span>
+              <div key={s.id} className="item-card group">
+                <div className="flex justify-between items-start">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center text-orange-500">
+                      <Package size={24} />
+                    </div>
+                    <div>
+                      <h4 className="font-black text-lg text-white">{s.name}</h4>
+                      <p className="text-[10px] theme-muted font-bold mt-1">{s.date}</p>
                     </div>
                   </div>
                 </div>
                 
-                <div className="flex sm:flex-col items-center sm:items-end gap-4 sm:gap-1 w-full sm:w-auto justify-between sm:justify-start">
-                  <div className="text-left">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">بڕ</span>
-                    <span className="font-black text-lg text-slate-800 dark:text-slate-100">{s.quantity}</span>
+                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/5">
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-black theme-muted uppercase tracking-widest">بۆ کوێ</p>
+                    <span className="flex items-center gap-1 text-xs font-bold text-white">{getDestinationIcon(s.destination)} {getDestinationLabel(s.destination)}</span>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-black theme-muted uppercase tracking-widest">لە کوێوە</p>
+                    <span className="flex items-center gap-1 text-xs font-bold text-white">{getSourceIcon(s.source)} {getSourceLabel(s.source)}</span>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-white/5 flex justify-between items-center">
+                  <div className="text-right">
+                    <span className="text-[10px] font-black theme-muted uppercase tracking-widest block">بڕ</span>
+                    <span className="font-black text-lg text-white">{s.quantity}</span>
                   </div>
                   {s.cost ? (
                     <div className="text-left">
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">تێچوو</span>
+                      <span className="text-[10px] font-black theme-muted uppercase tracking-widest block">تێچوو</span>
                       <span className="font-mono-data font-black text-orange-500">{s.cost.toLocaleString()}</span>
                     </div>
                   ) : null}

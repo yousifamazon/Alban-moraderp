@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { 
   ChevronLeft,
-  Printer
+  Printer,
+  Trash2,
+  Calendar
 } from 'lucide-react';
 import { Product, Waste } from '../../types';
 
@@ -140,6 +142,52 @@ export function WasteLogView({ products, waste, currency, onSave, onPrint, onBac
         >
           تۆمارکردنی زیان
         </button>
+      </div>
+
+      <div className="mt-12 space-y-6">
+        <h3 className="text-xl font-black px-2">مێژووی زیانەکان</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {waste.slice().reverse().map(w => (
+            <div key={w.id} className="item-card group">
+              <div className="flex justify-between items-start">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-orange-500/10 text-orange-500 flex items-center justify-center">
+                    <Trash2 size={20} />
+                  </div>
+                  <div>
+                    <p className="font-black text-sm text-white">{w.itemName}</p>
+                    <p className="text-[10px] theme-muted font-bold flex items-center gap-1 mt-1">
+                      <Calendar size={10} /> {w.date}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/5">
+                <div className="space-y-1">
+                  <p className="text-[10px] font-black theme-muted uppercase tracking-widest">بڕی زیان</p>
+                  <p className="text-sm font-black text-white">{w.quantity}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[10px] font-black theme-muted uppercase tracking-widest">تێچووی زیان</p>
+                  <p className="text-sm font-black text-white">{w.cost.toLocaleString()} {currency}</p>
+                </div>
+              </div>
+
+              {w.note && (
+                <div className="mt-2 p-3 bg-white/5 rounded-xl text-[10px] font-bold theme-muted italic">
+                  {w.note}
+                </div>
+              )}
+            </div>
+          ))}
+          {waste.length === 0 && (
+            <div className="col-span-full text-center py-20 bg-white/5 rounded-[3rem] border-2 border-dashed border-white/10">
+              <Trash2 size={48} className="mx-auto text-slate-700 mb-4 opacity-20" />
+              <p className="text-slate-500 font-bold">هیچ زیانێک تۆمار نەکراوە</p>
+            </div>
+          )}
+        </div>
       </div>
     </motion.div>
   );

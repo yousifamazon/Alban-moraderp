@@ -1,7 +1,8 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { 
-  ChevronLeft 
+  ChevronLeft,
+  Trash2
 } from 'lucide-react';
 import { Sale, Customer } from '../../types';
 
@@ -9,10 +10,11 @@ interface CustomerListViewProps {
   customers: Customer[];
   sales: Sale[];
   currency: string;
+  onDelete: (id: number) => void;
   onBack: () => void;
 }
 
-export function CustomerListView({ customers, sales, currency, onBack }: CustomerListViewProps) {
+export function CustomerListView({ customers, sales, currency, onDelete, onBack }: CustomerListViewProps) {
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="pb-24">
       <div className="flex items-center gap-4 mb-12">
@@ -30,7 +32,7 @@ export function CustomerListView({ customers, sales, currency, onBack }: Custome
           <div className="col-span-full text-center p-20 item-card theme-muted italic">هیچ کڕیارێک نییە</div>
         ) : (
           customers.map((c) => (
-            <div key={c.id} className="item-card p-8 flex-row justify-between items-center group">
+            <div key={c.id} className="item-card p-8 flex-row justify-between items-center group relative">
               <div className="flex items-center gap-6">
                 <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center font-black text-2xl group-hover:scale-110 transition-transform">
                   {c.name.charAt(0)}
@@ -42,11 +44,23 @@ export function CustomerListView({ customers, sales, currency, onBack }: Custome
                   </span>
                 </div>
               </div>
-              <div className="text-right">
-                <span className="text-2xl font-black font-mono-data">
-                  {sales.filter(s => s.customerName === c.name).length}
-                </span>
-                <span className="text-[10px] font-black theme-muted block mt-1 uppercase tracking-widest">وەسڵ</span>
+              <div className="flex flex-col items-end gap-2">
+                <div className="text-right">
+                  <span className="text-2xl font-black font-mono-data">
+                    {sales.filter(s => s.customerName === c.name).length}
+                  </span>
+                  <span className="text-[10px] font-black theme-muted block mt-1 uppercase tracking-widest">وەسڵ</span>
+                </div>
+                <button 
+                  onClick={() => {
+                    if (window.confirm('ئایا دڵنیایت لە سڕینەوەی ئەم کڕیارە؟')) {
+                      onDelete(c.id);
+                    }
+                  }}
+                  className="p-2 text-red-500 hover:bg-red-500/10 rounded-xl transition-all opacity-0 group-hover:opacity-100"
+                >
+                  <Trash2 size={16} />
+                </button>
               </div>
             </div>
           ))

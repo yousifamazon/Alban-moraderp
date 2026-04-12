@@ -10,6 +10,7 @@ export interface Product {
   expiryDate?: string;
   discount?: number;
   unit: string;
+  warehouseId?: number;
   [key: string]: any; // Allow custom fields
 }
 
@@ -419,6 +420,14 @@ export interface DraftOrder {
   paidAmount?: number;
 }
 
+export interface UserPermissions {
+  canEditPrice: boolean;
+  canDeleteSale: boolean;
+  canGiveDiscount: boolean;
+  canViewProfit: boolean;
+  canManageUsers: boolean;
+}
+
 export interface User {
   id: number;
   name: string;
@@ -426,6 +435,13 @@ export interface User {
   role: 'admin' | 'accountant' | 'driver' | 'shop' | 'factory' | 'livestock';
   allowedSections: string[];
   email?: string;
+  permissions?: UserPermissions;
+}
+
+export interface Warehouse {
+  id: number;
+  name: string;
+  location: string;
 }
 
 export interface ShopRequestItem {
@@ -494,6 +510,7 @@ export interface AuditLog {
 
 export interface ERPData {
   auditLogs?: AuditLog[];
+  warehouses?: Warehouse[];
   users?: User[];
   shopRequests?: ShopRequest[];
   farmers?: Farmer[];

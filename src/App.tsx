@@ -79,7 +79,7 @@ import { db, auth, handleFirestoreError, OperationType } from './firebase';
 import { onSnapshot, collection, doc, setDoc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, BarChart, Bar, Legend } from 'recharts';
-import { Product, Sale, Expense, Waste, ERPData, Payment, SupplierDebt, SupplierPayment, Supply, Settings, Supplier, Return, Shift, Employee, SalaryPayment, PurchaseOrder, PurchaseOrderItem, Customer, Task, Asset, Recipe, RecipeItem, ProductionOrder, Vehicle, Project, SupportTicket, Campaign, Driver, Animal, MilkingRecord, HealthRecord, DraftOrder, DraftOrderItem, Alert, InvoiceTemplate, CustomMenuSetting, CustomField, CustomSection, CustomAction } from './types';
+import { Product, Sale, Expense, Waste, ERPData, Payment, SupplierDebt, SupplierPayment, Supply, Settings, Supplier, Return, Shift, Employee, SalaryPayment, PurchaseOrder, PurchaseOrderItem, Customer, Task, Asset, Recipe, RecipeItem, ProductionOrder, Vehicle, Project, SupportTicket, Campaign, Driver, Animal, MilkingRecord, HealthRecord, DraftOrder, DraftOrderItem, Alert, InvoiceTemplate, CustomMenuSetting, CustomField, CustomSection, CustomAction, User, Warehouse, AuditLog, Farmer, MilkCollection } from './types';
 import { MENU_CATEGORIES, MENU_ITEMS } from './constants';
 
 // View Components
@@ -120,6 +120,11 @@ import { InvoiceTemplateView } from './components/views/InvoiceTemplateView';
 import { SystemCustomizerView } from './components/views/SystemCustomizerView';
 import { MilkCollectionView } from './components/views/MilkCollectionView';
 import { AuditLogView } from './components/views/AuditLogView';
+import { WarehouseMgmtView } from './components/views/WarehouseMgmtView';
+import { FinancialStatementsView } from './components/views/FinancialStatementsView';
+import { EmployeeManagementView } from './components/views/EmployeeManagementView';
+import { VehiclesView } from './components/views/VehiclesView';
+import { DriversView } from './components/views/DriversView';
 import { FooterNavButton, SidebarItem, StatCard } from './components/LayoutComponents';
 
 const STORAGE_KEY = 'alban_murad_erp_data';
@@ -141,6 +146,7 @@ const INITIAL_DATA: ERPData = {
   returns: [],
   shifts: [],
   auditLogs: [],
+  warehouses: [],
   employees: [],
   salaryPayments: [],
   purchaseOrders: [],
@@ -400,7 +406,9 @@ function App() {
     try {
       const docRef = doc(db, colName, String(id));
       await deleteDoc(docRef);
-      createAuditLog('Delete', colName, id, `Deleted ${colName} entry`);
+      if (colName !== 'auditLogs') {
+        createAuditLog('Delete', colName, id, `Deleted ${colName} entry`);
+      }
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, colName);
     }
@@ -1147,6 +1155,7 @@ function App() {
             <AddProductView 
               products={data.products} 
               categories={data.categories || []} 
+              warehouses={data.warehouses || []}
               currency={data.settings.currency} 
               customFields={data.settings.customFields}
               onSave={(p) => {
@@ -1166,6 +1175,10 @@ function App() {
                 // Update changed products in Firebase
                 updatedProducts.forEach(p => saveToFirebase('products', p));
               }} 
+              onDelete={(id) => {
+                setData(prev => ({ ...prev, products: prev.products.filter(p => p.id !== id) }));
+                deleteFromFirebase('products', id);
+              }}
               onBack={() => setActiveSection('hub')} 
             />
           )}
@@ -1181,6 +1194,10 @@ function App() {
                 setData(prev => ({ ...prev, expenses: [...prev.expenses, e] }));
                 saveToFirebase('expenses', e);
               }} 
+              onDelete={(id) => {
+                setData(prev => ({ ...prev, expenses: prev.expenses.filter(e => e.id !== id) }));
+                deleteFromFirebase('expenses', id);
+              }}
               onPrint={handlePrint} 
               onBack={() => setActiveSection('hub')} 
             />
@@ -1203,9 +1220,35 @@ function App() {
           {activeSection === 'shelf-label' && <ShelfLabelView products={data.products} currency={data.settings.currency} onBack={() => setActiveSection('hub')} />}
           {activeSection === 'qist-dash' && <QistDashView sales={data.sales} payments={data.payments} customers={data.customers || []} currency={data.settings.currency} onBack={() => setActiveSection('reports-hub')} />}
           {activeSection === 'manual' && <ManualView onBack={() => setActiveSection('hub')} />}
-          {activeSection === 'customer-list' && <CustomerListView customers={data.customers || []} sales={data.sales} currency={data.settings.currency} onBack={() => setActiveSection('hub')} />}
+          {activeSection === 'customer-list' && (
+            <CustomerListView 
+              customers={data.customers || []} 
+              sales={data.sales} 
+              currency={data.settings.currency} 
+              onDelete={(id) => {
+                setData(prev => ({ ...prev, customers: prev.customers.filter(c => c.id !== id) }));
+                deleteFromFirebase('customers', id);
+              }}
+              onBack={() => setActiveSection('hub')} 
+            />
+          )}
           {activeSection === 'low-stock' && <LowStockView products={data.products} onBack={() => setActiveSection('reports-hub')} />}
-          {activeSection === 'sales-history' && <SalesHistoryView sales={data.sales} products={data.products} customers={data.customers || []} currency={data.settings.currency} invoiceTemplate={getActiveTemplate()} onPrint={handlePrint} onBack={() => setActiveSection('hub')} />}
+          {activeSection === 'sales-history' && (
+            <SalesHistoryView 
+              sales={data.sales} 
+              products={data.products} 
+              customers={data.customers || []} 
+              currency={data.settings.currency} 
+              invoiceTemplate={getActiveTemplate()} 
+              onPrint={handlePrint} 
+              onDeleteSale={(receiptId) => {
+                const salesToDelete = data.sales.filter(s => (s.receiptId || s.id.toString()) === receiptId);
+                setData(prev => ({ ...prev, sales: prev.sales.filter(s => (s.receiptId || s.id.toString()) !== receiptId) }));
+                salesToDelete.forEach(s => deleteFromFirebase('sales', s.id));
+              }}
+              onBack={() => setActiveSection('hub')} 
+            />
+          )}
           {activeSection === 'livestock-mgmt' && (
             <LivestockView 
               initialTab="animals" 
@@ -1302,9 +1345,17 @@ function App() {
               currency={data.settings.currency} 
               darkMode={true} 
               onSave={(s) => {
-                setData(prev => ({ ...prev, suppliers: s }));
-                s.forEach(sup => saveToFirebase('suppliers', sup));
+                setData(prev => ({ ...prev, suppliers: [...prev.suppliers, s] }));
+                saveToFirebase('suppliers', s);
               }} 
+              onUpdate={(s) => {
+                setData(prev => ({ ...prev, suppliers: prev.suppliers.map(sup => sup.id === s.id ? s : sup) }));
+                saveToFirebase('suppliers', s);
+              }}
+              onDelete={(id) => {
+                setData(prev => ({ ...prev, suppliers: prev.suppliers.filter(s => s.id !== id) }));
+                deleteFromFirebase('suppliers', id);
+              }}
               onSaveDebt={(d) => {
                 setData(prev => ({ ...prev, supplierDebts: [...prev.supplierDebts, d] }));
                 saveToFirebase('supplierDebts', d);
@@ -1412,6 +1463,7 @@ function App() {
               products={data.products} 
               customers={data.customers || []} 
               sales={data.sales}
+              currentUser={currentUser}
               currency={data.settings.currency} 
               invoiceTemplate={getActiveTemplate()}
               customFields={data.settings.customFields}
@@ -1459,8 +1511,7 @@ function App() {
           {activeSection === 'hr-mgmt' && (
             <EmployeeManagementView 
               employees={data.employees || []} 
-              salaryPayments={data.salaryPayments || []} 
-              currency={data.settings.currency} 
+              employeePayments={data.salaryPayments || []} 
               onSaveEmployee={(e) => {
                 setData(prev => ({ ...prev, employees: [...(prev.employees || []), e] }));
                 saveToFirebase('employees', e);
@@ -1469,7 +1520,11 @@ function App() {
                 setData(prev => ({ ...prev, employees: (prev.employees || []).map(emp => emp.id === e.id ? e : emp) }));
                 saveToFirebase('employees', e);
               }} 
-              onSaveSalary={(s) => {
+              onDeleteEmployee={(id) => {
+                setData(prev => ({ ...prev, employees: (prev.employees || []).filter(emp => emp.id !== id) }));
+                deleteFromFirebase('employees', id);
+              }}
+              onSavePayment={(s) => {
                 setData(prev => ({ ...prev, salaryPayments: [...(prev.salaryPayments || []), s] }));
                 saveToFirebase('salaryPayments', s);
               }} 
@@ -1605,6 +1660,10 @@ function App() {
                 setData(prev => ({ ...prev, vehicles: (prev.vehicles || []).map(veh => veh.id === v.id ? v : veh) }));
                 saveToFirebase('vehicles', v);
               }} 
+              onDelete={(id) => {
+                setData(prev => ({ ...prev, vehicles: (prev.vehicles || []).filter(veh => veh.id !== id) }));
+                deleteFromFirebase('vehicles', id);
+              }}
               onBack={() => setActiveSection('hub')} 
             />
           )}
@@ -1620,6 +1679,10 @@ function App() {
                 setData(prev => ({ ...prev, drivers: (prev.drivers || []).map(dr => dr.id === d.id ? d : dr) }));
                 saveToFirebase('drivers', d);
               }} 
+              onDelete={(id) => {
+                setData(prev => ({ ...prev, drivers: (prev.drivers || []).filter(dr => dr.id !== id) }));
+                deleteFromFirebase('drivers', id);
+              }}
               onBack={() => setActiveSection('hub')} 
             />
           )}
@@ -1690,6 +1753,8 @@ function App() {
             <MilkCollectionView 
               data={data} 
               onUpdateData={setData} 
+              saveToFirebase={saveToFirebase}
+              deleteFromFirebase={deleteFromFirebase}
               onBack={() => setActiveSection('hub')} 
             />
           )}
@@ -1697,6 +1762,32 @@ function App() {
             <AuditLogView 
               logs={data.auditLogs || []} 
               onBack={() => setActiveSection('hub')} 
+            />
+          )}
+          {activeSection === 'warehouse-mgmt' && (
+            <WarehouseMgmtView 
+              warehouses={data.warehouses || []} 
+              products={data.products}
+              onSave={(w) => {
+                setData(prev => ({ ...prev, warehouses: [...(prev.warehouses || []), w] }));
+                saveToFirebase('warehouses', w);
+              }}
+              onUpdate={(w) => {
+                setData(prev => ({ ...prev, warehouses: (prev.warehouses || []).map(wh => wh.id === w.id ? w : wh) }));
+                saveToFirebase('warehouses', w);
+              }}
+              onDelete={(id) => {
+                setData(prev => ({ ...prev, warehouses: (prev.warehouses || []).filter(wh => wh.id !== id) }));
+                deleteFromFirebase('warehouses', id);
+              }}
+              onBack={() => setActiveSection('hub')} 
+            />
+          )}
+          {activeSection === 'financial-statements' && (
+            <FinancialStatementsView 
+              data={data} 
+              currency={data.settings.currency} 
+              onBack={() => setActiveSection('reports-hub')} 
             />
           )}
           {data.settings.customSections?.map((section: CustomSection) => (
@@ -2450,132 +2541,6 @@ function CategoryMgmtView({ categories, onSave, onBack }: { categories: string[]
     </motion.div>
   );
 }
-
-function EmployeeManagementView({ employees, salaryPayments, currency, onSaveEmployee, onUpdateEmployee, onSaveSalary, onBack }: { employees: Employee[], salaryPayments: SalaryPayment[], currency: string, onSaveEmployee: (e: Employee) => void, onUpdateEmployee: (e: Employee) => void, onSaveSalary: (s: SalaryPayment) => void, onBack: () => void }) {
-  const [showAdd, setShowAdd] = useState(false);
-  const [name, setName] = useState('');
-  const [role, setRole] = useState<'admin' | 'manager' | 'cashier' | 'accountant'>('cashier');
-  const [phone, setPhone] = useState('');
-  const [salary, setSalary] = useState('');
-  const [joinDate, setJoinDate] = useState(new Date().toISOString().split('T')[0]);
-
-  const [payEmployeeId, setPayEmployeeId] = useState<number | null>(null);
-  const [payAmount, setPayAmount] = useState('');
-  const [payMonth, setPayMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
-  const [payNotes, setPayNotes] = useState('');
-
-  const handleAddEmployee = () => {
-    if (!name || !salary) return toast.error("تکایە ناو و مووچە پڕبکەرەوە");
-    onSaveEmployee({
-      id: Date.now(),
-      name,
-      role,
-      phone,
-      salary: parseFloat(salary),
-      joinDate,
-      status: 'active'
-    });
-    setShowAdd(false);
-    setName('');
-    setPhone('');
-    setSalary('');
-  };
-
-  const handlePaySalary = () => {
-    if (!payEmployeeId || !payAmount || !payMonth) return toast.error("تکایە زانیارییەکان پڕبکەرەوە");
-    const employee = employees.find(e => e.id === payEmployeeId);
-    onSaveSalary({
-      id: Date.now(),
-      employeeId: payEmployeeId,
-      employeeName: employee?.name || 'نادیار',
-      amount: parseFloat(payAmount),
-      date: new Date().toLocaleDateString('ku-IQ'),
-      month: payMonth,
-      notes: payNotes
-    });
-    setPayEmployeeId(null);
-    setPayAmount('');
-    setPayNotes('');
-    toast.success("مووچە بەسەرکەوتوویی درا");
-  };
-
-  return (
-    <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6 pb-12">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <button onClick={onBack} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full"><ChevronLeft /></button>
-          <h2 className="font-bold text-lg text-teal-600 dark:text-teal-400">کارمەندان و مووچە</h2>
-        </div>
-        <button onClick={() => setShowAdd(!showAdd)} className="bg-teal-600 text-white px-4 py-2 rounded-xl font-bold flex items-center gap-2">
-          <Plus size={18} /> کارمەندی نوێ
-        </button>
-      </div>
-
-      {showAdd && (
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 space-y-4">
-          <h3 className="font-bold text-slate-700 dark:text-slate-300">زیادکردنی کارمەند</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="ناوی کارمەند" className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none" />
-            <select value={role} onChange={e => setRole(e.target.value as any)} className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none">
-              <option value="cashier">کاشێر</option>
-              <option value="manager">بەڕێوەبەر</option>
-              <option value="accountant">ژمێریار</option>
-              <option value="admin">ئەدمین</option>
-            </select>
-            <input type="text" value={phone} onChange={e => setPhone(e.target.value)} placeholder="ژمارەی مۆبایل" className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none" />
-            <input type="number" value={salary} onChange={e => setSalary(e.target.value)} placeholder="مووچەی مانگانە" className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none" />
-            <input type="date" value={joinDate} onChange={e => setJoinDate(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none" />
-          </div>
-          <button onClick={handleAddEmployee} className="w-full bg-teal-600 text-white p-3 rounded-xl font-bold">پاشەکەوتکردن</button>
-        </div>
-      )}
-
-      {payEmployeeId && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 w-full max-w-md space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="font-bold text-lg">پێدانی مووچە</h3>
-              <button onClick={() => setPayEmployeeId(null)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full"><X size={20} /></button>
-            </div>
-            <p className="text-sm text-slate-500">کارمەند: {employees.find(e => e.id === payEmployeeId)?.name}</p>
-            <input type="month" value={payMonth} onChange={e => setPayMonth(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none" />
-            <input type="number" value={payAmount} onChange={e => setPayAmount(e.target.value)} placeholder="بڕی پارە" className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none" />
-            <input type="text" value={payNotes} onChange={e => setPayNotes(e.target.value)} placeholder="تێبینی (ئارەزوومەندانە)" className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none" />
-            <button onClick={handlePaySalary} className="w-full bg-teal-600 text-white p-3 rounded-xl font-bold">پێدانی مووچە</button>
-          </div>
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {employees.map(emp => (
-          <div key={emp.id} className="bg-white dark:bg-slate-900 p-5 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col justify-between">
-            <div>
-              <div className="flex justify-between items-start mb-2">
-                <h3 className="font-bold text-lg text-slate-800 dark:text-slate-100">{emp.name}</h3>
-                <span className="text-xs bg-teal-100 text-teal-700 px-2 py-1 rounded-full">{emp.role}</span>
-              </div>
-              <p className="text-sm text-slate-500 mb-1">مۆبایل: {emp.phone || 'نەنووسراوە'}</p>
-              <p className="text-sm text-slate-500 mb-4">مووچە: <span className="font-bold text-slate-700 dark:text-slate-300">{emp.salary.toLocaleString()} {currency}</span></p>
-            </div>
-            <div className="flex gap-2">
-              <button onClick={() => { setPayEmployeeId(emp.id); setPayAmount(emp.salary.toString()); }} className="flex-1 bg-teal-50 text-teal-700 hover:bg-teal-100 dark:bg-teal-900/30 dark:text-teal-400 p-2 rounded-xl font-bold text-sm transition-colors">
-                پێدانی مووچە
-              </button>
-              <button onClick={() => onUpdateEmployee({...emp, status: emp.status === 'active' ? 'inactive' : 'active'})} className={cn("px-4 py-2 rounded-xl font-bold text-sm transition-colors", emp.status === 'active' ? "bg-red-50 text-red-600 hover:bg-red-100" : "bg-emerald-50 text-emerald-600 hover:bg-emerald-100")}>
-                {emp.status === 'active' ? 'ڕاگرتن' : 'چالاککردن'}
-              </button>
-            </div>
-          </div>
-        ))}
-        {employees.length === 0 && (
-          <div className="col-span-full text-center py-12 text-slate-400">هیچ کارمەندێک تۆمار نەکراوە</div>
-        )}
-      </div>
-    </motion.div>
-  );
-}
-
-
 
 function CustomerLoyaltyView({ customers, sales, onSave, onUpdate, onBack }: { customers: Customer[], sales: Sale[], onSave: (c: Customer) => void, onUpdate: (c: Customer) => void, onBack: () => void }) {
   const [showAdd, setShowAdd] = useState(false);
@@ -3403,227 +3368,6 @@ function ProductionView({ orders, recipes, products, currency, onSave, onUpdate,
         })}
         {orders.length === 0 && (
           <div className="text-center py-12 text-slate-400">هیچ داواکارییەکی بەرهەمهێنان نییە</div>
-        )}
-      </div>
-    </motion.div>
-  );
-}
-
-function VehiclesView({ vehicles, employees, onSave, onUpdate, onBack }: { vehicles: Vehicle[], employees: Employee[], onSave: (v: Vehicle) => void, onUpdate: (v: Vehicle) => void, onBack: () => void }) {
-  const [showAdd, setShowAdd] = useState(false);
-  const [name, setName] = useState('');
-  const [plateNumber, setPlateNumber] = useState('');
-  const [driverId, setDriverId] = useState('');
-  const [mileage, setMileage] = useState('');
-
-  const handleAdd = () => {
-    if (!name || !plateNumber) return toast.error("تکایە ناو و ژمارەی تابلۆ پڕبکەرەوە");
-    onSave({
-      id: Date.now(),
-      name,
-      plateNumber,
-      driverId: driverId ? parseInt(driverId) : undefined,
-      status: 'active',
-      mileage: parseInt(mileage || '0')
-    });
-    setShowAdd(false);
-    setName('');
-    setPlateNumber('');
-    setDriverId('');
-    setMileage('');
-  };
-
-  return (
-    <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6 pb-12">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <button onClick={onBack} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full"><ChevronLeft /></button>
-          <h2 className="font-bold text-lg text-slate-800 dark:text-slate-100">ئۆتۆمبێلەکان</h2>
-        </div>
-        <button onClick={() => setShowAdd(!showAdd)} className="bg-slate-800 dark:bg-slate-700 text-white px-4 py-2 rounded-xl font-bold flex items-center gap-2">
-          <Plus size={18} /> ئۆتۆمبێلی نوێ
-        </button>
-      </div>
-
-      {showAdd && (
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 space-y-4">
-          <h3 className="font-bold text-slate-700 dark:text-slate-300">زیادکردنی ئۆتۆمبێل</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="جۆر و مۆدێل (نموونە: تۆیۆتا هیلۆکس)" className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none" />
-            <input type="text" value={plateNumber} onChange={e => setPlateNumber(e.target.value)} placeholder="ژمارەی تابلۆ" className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none" />
-            <select value={driverId} onChange={e => setDriverId(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none">
-              <option value="">دیاریکردنی شۆفێر...</option>
-              {employees.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
-            </select>
-            <input type="number" value={mileage} onChange={e => setMileage(e.target.value)} placeholder="کیلۆمەتر (Mileage)" className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none" />
-          </div>
-          <button onClick={handleAdd} className="w-full bg-slate-800 dark:bg-slate-700 text-white p-3 rounded-xl font-bold">پاشەکەوتکردن</button>
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {vehicles.map(v => (
-          <div key={v.id} className="bg-white dark:bg-slate-900 p-5 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <h3 className="font-bold text-lg text-slate-800 dark:text-slate-100">{v.name}</h3>
-                <p className="text-sm font-mono bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-lg inline-block mt-1">{v.plateNumber}</p>
-              </div>
-              <select 
-                value={v.status} 
-                onChange={e => onUpdate({...v, status: e.target.value as any})}
-                className={cn("text-xs px-2 py-1 rounded-full font-bold outline-none", 
-                  v.status === 'active' ? "bg-emerald-100 text-emerald-700" : 
-                  v.status === 'maintenance' ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"
-                )}
-              >
-                <option value="active">چالاک</option>
-                <option value="maintenance">لە چاککردنەوەدایە</option>
-                <option value="inactive">لەکارکەوتوو</option>
-              </select>
-            </div>
-            <div className="flex justify-between text-sm text-slate-500">
-              <span>شۆفێر: <span className="font-bold text-slate-700 dark:text-slate-300">{employees.find(e => e.id === v.driverId)?.name || 'دیارینەکراوە'}</span></span>
-              <span>{v.mileage.toLocaleString()} KM</span>
-            </div>
-          </div>
-        ))}
-        {vehicles.length === 0 && (
-          <div className="col-span-full text-center py-12 text-slate-400">هیچ ئۆتۆمبێلێک تۆمار نەکراوە</div>
-        )}
-      </div>
-    </motion.div>
-  );
-}
-
-function DriversView({ drivers, vehicles, onSave, onUpdate, onBack }: { drivers: Driver[], vehicles: Vehicle[], onSave: (d: Driver) => void, onUpdate: (d: Driver) => void, onBack: () => void }) {
-  const [showAdd, setShowAdd] = useState(false);
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [licenseNumber, setLicenseNumber] = useState('');
-  const [vehicleId, setVehicleId] = useState<string>('');
-  const [editingDriver, setEditingDriver] = useState<Driver | null>(null);
-  const [editName, setEditName] = useState('');
-  const [editPhone, setEditPhone] = useState('');
-  const [editLicense, setEditLicense] = useState('');
-  const [editVehicleId, setEditVehicleId] = useState<string>('');
-
-  const handleAdd = () => {
-    if (!name || !phone) return toast.error("تکایە ناو و ژمارەی تەلەفۆن پڕبکەرەوە");
-    onSave({
-      id: Date.now(),
-      name,
-      phone,
-      licenseNumber,
-      status: 'active',
-      vehicleId: vehicleId ? Number(vehicleId) : undefined
-    });
-    setShowAdd(false);
-    setName('');
-    setPhone('');
-    setLicenseNumber('');
-    setVehicleId('');
-  };
-
-  const startEdit = (d: Driver) => {
-    setEditingDriver(d);
-    setEditName(d.name);
-    setEditPhone(d.phone);
-    setEditLicense(d.licenseNumber);
-    setEditVehicleId(d.vehicleId?.toString() || '');
-  };
-
-  const handleUpdate = () => {
-    if (!editingDriver) return;
-    onUpdate({
-      ...editingDriver,
-      name: editName,
-      phone: editPhone,
-      licenseNumber: editLicense,
-      vehicleId: editVehicleId ? Number(editVehicleId) : undefined
-    });
-    setEditingDriver(null);
-  };
-
-  return (
-    <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6 pb-12">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <button onClick={onBack} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full"><ChevronLeft /></button>
-          <h2 className="font-bold text-lg text-slate-800 dark:text-slate-100">شۆفێرەکان</h2>
-        </div>
-        <button onClick={() => setShowAdd(!showAdd)} className="bg-slate-800 dark:bg-slate-700 text-white px-4 py-2 rounded-xl font-bold flex items-center gap-2">
-          <Plus size={18} /> شۆفێری نوێ
-        </button>
-      </div>
-
-      {showAdd && (
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 space-y-4">
-          <h3 className="font-bold text-slate-700 dark:text-slate-300">زیادکردنی شۆفێر</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="ناوی شۆفێر" className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none" />
-            <input type="text" value={phone} onChange={e => setPhone(e.target.value)} placeholder="ژمارەی تەلەفۆن" className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none" />
-            <input type="text" value={licenseNumber} onChange={e => setLicenseNumber(e.target.value)} placeholder="ژمارەی مۆڵەت" className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none" />
-            <select value={vehicleId} onChange={e => setVehicleId(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none">
-              <option value="">ئۆتۆمبێل هەڵبژێرە</option>
-              {vehicles.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
-            </select>
-          </div>
-          <button onClick={handleAdd} className="w-full bg-slate-800 dark:bg-slate-700 text-white p-3 rounded-xl font-bold">پاشەکەوتکردن</button>
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {drivers.map(d => {
-          if (editingDriver?.id === d.id) {
-            return (
-              <div key={d.id} className="bg-white dark:bg-slate-900 p-5 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 space-y-4">
-                <h3 className="font-bold text-slate-700 dark:text-slate-300">دەستکاریکردنی {d.name}</h3>
-                <div className="grid grid-cols-1 gap-4">
-                  <input type="text" value={editName} onChange={e => setEditName(e.target.value)} placeholder="ناوی شۆفێر" className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none" />
-                  <input type="text" value={editPhone} onChange={e => setEditPhone(e.target.value)} placeholder="ژمارەی تەلەفۆن" className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none" />
-                  <input type="text" value={editLicense} onChange={e => setEditLicense(e.target.value)} placeholder="ژمارەی مۆڵەت" className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none" />
-                  <select value={editVehicleId} onChange={e => setEditVehicleId(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none">
-                    <option value="">ئۆتۆمبێل هەڵبژێرە</option>
-                    {vehicles.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
-                  </select>
-                </div>
-                <div className="flex gap-2">
-                  <button onClick={handleUpdate} className="flex-1 bg-emerald-600 text-white p-3 rounded-xl font-bold">نوێکردنەوە</button>
-                  <button onClick={() => setEditingDriver(null)} className="flex-1 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 p-3 rounded-xl font-bold">هەڵوەشاندنەوە</button>
-                </div>
-              </div>
-            );
-          }
-          const vehicle = vehicles.find(v => v.id === d.vehicleId);
-          return (
-            <div key={d.id} className="bg-white dark:bg-slate-900 p-5 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <h3 className="font-bold text-lg text-slate-800 dark:text-slate-100">{d.name}</h3>
-                  <p className="text-sm text-slate-500">{d.phone}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button onClick={() => startEdit(d)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-500"><Edit2 size={16} /></button>
-                  <select 
-                    value={d.status} 
-                    onChange={e => onUpdate({...d, status: e.target.value as any})}
-                    className={cn("text-xs px-2 py-1 rounded-full font-bold outline-none", 
-                      d.status === 'active' ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"
-                    )}
-                  >
-                    <option value="active">چالاک</option>
-                    <option value="inactive">ناچالاک</option>
-                  </select>
-                </div>
-              </div>
-              <p className="text-sm text-slate-500">مۆڵەت: <span className="font-bold text-slate-700 dark:text-slate-300">{d.licenseNumber}</span></p>
-              <p className="text-sm text-slate-500">ئۆتۆمبێل: <span className="font-bold text-slate-700 dark:text-slate-300">{vehicle?.name || 'بێ ئۆتۆمبێل'}</span></p>
-            </div>
-          );
-        })}
-        {drivers.length === 0 && (
-          <div className="col-span-full text-center py-12 text-slate-400">هیچ شۆفێرێک تۆمار نەکراوە</div>
         )}
       </div>
     </motion.div>

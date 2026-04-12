@@ -67,25 +67,35 @@ export function TasksView({ tasks, employees, onSave, onUpdate, onBack }: TasksV
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {['todo', 'in-progress', 'done'].map(status => (
-          <div key={status} className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-3xl">
-            <h3 className="font-bold text-slate-700 dark:text-slate-300 mb-4 capitalize">
+          <div key={status} className="bg-white/5 p-6 rounded-[2.5rem] border border-white/5">
+            <h3 className="font-black text-slate-400 mb-6 flex items-center gap-2">
+              <div className={cn("w-2 h-2 rounded-full", 
+                status === 'todo' ? "bg-slate-400" : status === 'in-progress' ? "bg-amber-500" : "bg-emerald-500"
+              )} />
               {status === 'todo' ? 'بۆ کردن' : status === 'in-progress' ? 'لە جێبەجێکردندایە' : 'تەواوبووە'}
             </h3>
-            <div className="space-y-3">
+            <div className="space-y-4">
               {tasks.filter(t => t.status === status).map(t => (
-                <div key={t.id} className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800">
-                  <h4 className="font-bold text-sm mb-1">{t.title}</h4>
-                  <p className="text-xs text-slate-500 mb-3">{t.description}</p>
-                  <div className="flex justify-between items-center text-xs text-slate-400 mb-3">
-                    <span>{employees.find(e => e.id === t.assignedTo)?.name}</span>
+                <div key={t.id} className="item-card p-5 gap-3">
+                  <h4 className="font-black text-sm text-white">{t.title}</h4>
+                  <p className="text-[10px] font-bold theme-muted line-clamp-2">{t.description}</p>
+                  
+                  <div className="flex justify-between items-center text-[10px] font-bold theme-muted pt-2 border-t border-white/5">
+                    <span className="flex items-center gap-1">
+                      <div className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center text-[8px]">
+                        {employees.find(e => e.id === t.assignedTo)?.name.charAt(0)}
+                      </div>
+                      {employees.find(e => e.id === t.assignedTo)?.name}
+                    </span>
                     <span>{t.dueDate}</span>
                   </div>
+                  
                   <select 
                     value={t.status} 
                     onChange={e => onUpdate({...t, status: e.target.value as any})}
-                    className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs outline-none"
+                    className="w-full p-3 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black text-white outline-none focus:ring-2 ring-indigo-500/20 transition-all mt-2"
                   >
                     <option value="todo">بۆ کردن</option>
                     <option value="in-progress">لە جێبەجێکردندایە</option>
@@ -93,6 +103,11 @@ export function TasksView({ tasks, employees, onSave, onUpdate, onBack }: TasksV
                   </select>
                 </div>
               ))}
+              {tasks.filter(t => t.status === status).length === 0 && (
+                <div className="text-center py-10 text-[10px] font-bold theme-muted border-2 border-dashed border-white/5 rounded-3xl">
+                  هیچ ئەرکێک نییە
+                </div>
+              )}
             </div>
           </div>
         ))}

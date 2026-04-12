@@ -66,28 +66,54 @@ export function CampaignsView({ campaigns, currency, onSave, onUpdate, onBack }:
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {campaigns.map(c => (
-          <div key={c.id} className="bg-white dark:bg-slate-900 p-5 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
-            <div className="flex justify-between items-start mb-2">
-              <h3 className="font-bold text-lg text-slate-800 dark:text-slate-100">{c.name}</h3>
-              <select value={c.status} onChange={e => onUpdate({...c, status: e.target.value as any})} className="text-xs px-2 py-1 rounded-full font-bold outline-none bg-pink-100 text-pink-700">
+          <div key={c.id} className="item-card group">
+            <div className="flex justify-between items-start">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center text-pink-500 group-hover:text-white transition-all">
+                  <Plus size={28} className="rotate-45" />
+                </div>
+                <div>
+                  <h3 className="font-black text-lg text-white">{c.name}</h3>
+                  <p className="text-[10px] font-bold theme-muted mt-1">{c.startDate} - {c.endDate}</p>
+                </div>
+              </div>
+              <select value={c.status} onChange={e => onUpdate({...c, status: e.target.value as any})} className={cn("text-[8px] px-2 py-1 rounded-full font-black uppercase outline-none transition-all border", 
+                c.status === 'active' ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" : 
+                c.status === 'completed' ? "bg-blue-500/10 text-blue-500 border-blue-500/20" : "bg-amber-500/10 text-amber-500 border-amber-500/20"
+              )}>
                 <option value="active">چالاک</option>
                 <option value="completed">تەواوبووە</option>
                 <option value="paused">ڕاگیراوە</option>
               </select>
             </div>
-            <p className="text-xs text-slate-500 mb-4">ئامانج: {c.targetAudience}</p>
-            <div className="flex justify-between text-xs mb-1">
-              <span className="text-slate-500">خەرجکراو: {c.spent.toLocaleString()} {currency}</span>
-              <span className="font-bold text-slate-700 dark:text-slate-300">بودجە: {c.budget.toLocaleString()} {currency}</span>
-            </div>
-            <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2">
-              <div className="bg-pink-500 h-2 rounded-full" style={{ width: `${Math.min(100, (c.spent / c.budget) * 100)}%` }}></div>
+            
+            <div className="space-y-4 pt-4 border-t border-white/5">
+              <p className="text-[10px] font-bold theme-muted">ئامانج: {c.targetAudience}</p>
+              
+              <div className="space-y-2">
+                <div className="flex justify-between text-[10px] font-black uppercase tracking-widest">
+                  <span className="theme-muted">خەرجکراو: {c.spent.toLocaleString()} {currency}</span>
+                  <span className="text-white">بودجە: {c.budget.toLocaleString()} {currency}</span>
+                </div>
+                <div className="w-full bg-white/5 rounded-full h-1.5 overflow-hidden">
+                  <motion.div 
+                    initial={{ width: 0 }}
+                    animate={{ width: `${Math.min(100, (c.spent / c.budget) * 100)}%` }}
+                    className="bg-pink-500 h-full rounded-full" 
+                  />
+                </div>
+              </div>
             </div>
           </div>
         ))}
-        {campaigns.length === 0 && <div className="col-span-full text-center py-12 text-slate-400">هیچ کەمپەینێک نییە</div>}
+        {campaigns.length === 0 && (
+          <div className="col-span-full text-center py-20 bg-white/5 rounded-[3rem] border-2 border-dashed border-white/10">
+            <Plus size={48} className="mx-auto text-slate-700 mb-4 opacity-20" />
+            <p className="text-slate-500 font-bold">هیچ کەمپەینێک نییە</p>
+          </div>
+        )}
       </div>
     </motion.div>
   );

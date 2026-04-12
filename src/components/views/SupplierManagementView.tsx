@@ -22,13 +22,15 @@ interface SupplierManagementViewProps {
   payments: SupplierPayment[];
   currency: string;
   darkMode: boolean;
-  onSave: (s: Supplier[]) => void;
+  onSave: (s: Supplier) => void;
+  onUpdate: (s: Supplier) => void;
+  onDelete: (id: number) => void;
   onSaveDebt: (d: SupplierDebt) => void;
   onSavePayment: (p: SupplierPayment) => void;
   onBack: () => void;
 }
 
-export function SupplierManagementView({ suppliers, debts, payments, currency, darkMode, onSave, onSaveDebt, onSavePayment, onBack }: SupplierManagementViewProps) {
+export function SupplierManagementView({ suppliers, debts, payments, currency, darkMode, onSave, onUpdate, onDelete, onSaveDebt, onSavePayment, onBack }: SupplierManagementViewProps) {
   const [form, setForm] = useState<Partial<Supplier>>({ name: '', phone: '', address: '', paymentTerms: '' });
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
   const [supplierSearch, setSupplierSearch] = useState('');
@@ -79,15 +81,14 @@ export function SupplierManagementView({ suppliers, debts, payments, currency, d
       address: form.address || '',
       paymentTerms: form.paymentTerms || ''
     };
-    onSave([...suppliers, newSupplier]);
+    onSave(newSupplier);
     setForm({ name: '', phone: '', address: '', paymentTerms: '' });
     toast.success("دابینکەری نوێ زیادکرا");
   };
 
   const handleUpdateSupplier = () => {
     if (!editingSupplier || !editingSupplier.name) return toast.error("ناوی دابینکەر پێویستە");
-    const updated = suppliers.map(s => s.id === editingSupplier.id ? editingSupplier : s);
-    onSave(updated);
+    onUpdate(editingSupplier);
     setEditingSupplier(null);
     toast.success("زانیارییەکانی دابینکەر نوێکرایەوە");
   };
@@ -126,7 +127,7 @@ export function SupplierManagementView({ suppliers, debts, payments, currency, d
 
   const handleDelete = async (id: number) => {
     if (await customConfirm("ئایا دڵنیایت لە سڕینەوەی ئەم دابینکەرە؟")) {
-      onSave(suppliers.filter(s => s.id !== id));
+      onDelete(id);
     }
   };
 

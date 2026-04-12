@@ -91,44 +91,66 @@ export function FactoryDebtView({ debts, payments, currency, onSaveDebt, onSaveP
       </div>
 
       {recentTransactions.length > 0 && (
-        <div className="space-y-2 mb-6">
-          <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400 px-2">دوایین مامەڵەکان</h3>
-          {recentTransactions.map(t => (
-            <div key={t.id} className="bg-white dark:bg-slate-900 p-3 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 flex justify-between items-center">
-              <div className="text-right">
-                <span className="text-sm font-bold text-slate-700 dark:text-slate-200 block">{t.supplierName}</span>
-                <span className="text-[10px] text-slate-400 dark:text-slate-500">{t.date}</span>
+        <div className="space-y-4 mb-8">
+          <h3 className="text-[10px] font-black theme-muted uppercase tracking-widest px-2">دوایین مامەڵەکان</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {recentTransactions.map(t => (
+              <div key={t.id} className="item-card group">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-4">
+                    <div className={cn(
+                      "w-12 h-12 rounded-2xl flex items-center justify-center",
+                      debts.some(d => d.id === t.id) ? "bg-red-500/10 text-red-500" : "bg-emerald-500/10 text-emerald-500"
+                    )}>
+                      <span className="font-black text-lg">{debts.some(d => d.id === t.id) ? '-' : '+'}</span>
+                    </div>
+                    <div>
+                      <h3 className="font-black text-sm text-white">{t.supplierName}</h3>
+                      <p className="text-[10px] theme-muted font-bold mt-1">{t.date}</p>
+                    </div>
+                  </div>
+                  <b className={cn("text-lg", debts.some(d => d.id === t.id) ? "text-red-500" : "text-emerald-500")}>
+                    {t.amount.toLocaleString()} {currency}
+                  </b>
+                </div>
               </div>
-              <span className={cn("text-sm font-black", 'supplierName' in t && 'amount' in t ? (debts.some(d => d.id === t.id) ? "text-red-500" : "text-emerald-500") : "")}>
-                {t.amount.toLocaleString()} {currency}
-              </span>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       )}
 
       <div className="space-y-4">
-        <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400 px-2">کۆی قەرزەکان بەپێی کارگە</h3>
-        {suppliers?.map(s => {
-          const sDebts = debts?.filter(d => d.supplierName === s) || [];
-          const sPayments = payments?.filter(p => p.supplierName === s) || [];
-          const totalD = sDebts.reduce((a, b) => a + b.amount, 0);
-          const totalP = sPayments.reduce((a, b) => a + b.amount, 0);
-          const balance = totalD - totalP;
+        <h3 className="text-[10px] font-black theme-muted uppercase tracking-widest px-2">کۆی قەرزەکان بەپێی کارگە</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {suppliers?.map(s => {
+            const sDebts = debts?.filter(d => d.supplierName === s) || [];
+            const sPayments = payments?.filter(p => p.supplierName === s) || [];
+            const totalD = sDebts.reduce((a, b) => a + b.amount, 0);
+            const totalP = sPayments.reduce((a, b) => a + b.amount, 0);
+            const balance = totalD - totalP;
 
-          return (
-            <div key={s} className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 flex justify-between items-center">
-              <div className="text-right">
-                <b className="text-slate-700 dark:text-slate-200 block">{s}</b>
-                <span className="text-[10px] text-slate-400 dark:text-slate-500">کڕین: {totalD.toLocaleString()} | دراوە: {totalP.toLocaleString()}</span>
+            return (
+              <div key={s} className="item-card group">
+                <div className="flex justify-between items-start mb-6">
+                  <div>
+                    <h3 className="font-black text-lg text-white">{s}</h3>
+                    <p className="text-[10px] font-bold theme-muted mt-1">کڕین: {totalD.toLocaleString()} | دراوە: {totalP.toLocaleString()}</p>
+                  </div>
+                  <div className="text-left">
+                    <span className="text-[8px] font-black theme-muted uppercase tracking-widest block mb-1">ماوە</span>
+                    <b className={cn("text-xl", balance > 0 ? "text-red-500" : "text-emerald-500")}>{balance.toLocaleString()}</b>
+                  </div>
+                </div>
+                <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                  <div 
+                    className={cn("h-full transition-all duration-1000", balance > 0 ? "bg-red-500" : "bg-emerald-500")}
+                    style={{ width: `${Math.min(100, (totalP / totalD) * 100)}%` }}
+                  />
+                </div>
               </div>
-              <div className="text-right">
-                <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider mb-1">ماوە</p>
-                <b className={cn("text-lg", balance > 0 ? "text-red-500" : "text-emerald-500")}>{balance.toLocaleString()} {currency}</b>
-              </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </motion.div>
   );

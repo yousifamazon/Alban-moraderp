@@ -84,74 +84,56 @@ export function AuditLogView({ logs, onBack }: AuditLogViewProps) {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-right">
-            <thead>
-              <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">بەکارهێنەر</th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">چالاکی</th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">بەش</th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">کۆد/ID</th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">کاتی چالاکی</th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">وردەکاری</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
-              {filteredLogs.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-6 py-20 text-center opacity-20">
-                    <History size={48} className="mx-auto mb-4" />
-                    <p className="font-black">هیچ تۆمارێک نەدۆزرایەوە</p>
-                  </td>
-                </tr>
-              ) : (
-                filteredLogs.map(log => (
-                  <tr key={log.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
-                          <User size={14} />
-                        </div>
-                        <span className="font-bold text-sm text-slate-700 dark:text-slate-200">{log.userName}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
+      <div className="grid grid-cols-1 gap-4">
+        {filteredLogs.length === 0 ? (
+          <div className="text-center py-20 bg-white/5 rounded-[3rem] border-2 border-dashed border-white/10">
+            <History size={48} className="mx-auto text-slate-700 mb-4 opacity-20" />
+            <p className="text-slate-500 font-bold">هیچ تۆمارێک نەدۆزرایەوە</p>
+          </div>
+        ) : (
+          filteredLogs.map(log => (
+            <div key={log.id} className="item-card group">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-emerald-500">
+                    <User size={20} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-black text-sm text-white">{log.userName}</span>
                       <span className={cn(
-                        "px-3 py-1 rounded-full text-[10px] font-black uppercase",
-                        log.action.includes('Delete') ? "bg-red-500/10 text-red-500" :
-                        log.action.includes('Update') ? "bg-blue-500/10 text-blue-500" : "bg-emerald-500/10 text-emerald-500"
+                        "px-2 py-0.5 rounded-full text-[8px] font-black uppercase border",
+                        log.action.includes('Delete') ? "bg-red-500/10 text-red-500 border-red-500/20" :
+                        log.action.includes('Update') ? "bg-blue-500/10 text-blue-500 border-blue-500/20" : "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
                       )}>
                         {log.action}
                       </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
-                        <Tag size={12} />
-                        <span className="text-xs font-bold">{log.entity}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="font-mono-data text-xs text-slate-500">#{log.entityId}</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
-                        <Calendar size={12} />
-                        <span className="text-xs font-bold">{new Date(log.date).toLocaleString('ku-IQ')}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 max-w-xs">
-                        <Info size={12} />
-                        <span className="text-xs font-medium truncate">{log.details}</span>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                    </div>
+                    <div className="flex items-center gap-3 mt-1">
+                      <p className="text-[10px] theme-muted font-bold flex items-center gap-1">
+                        <Tag size={10} /> {log.entity}
+                      </p>
+                      <p className="text-[10px] theme-muted font-bold flex items-center gap-1">
+                        <Calendar size={10} /> {new Date(log.date).toLocaleString('ku-IQ')}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-4 w-full md:w-auto pt-4 md:pt-0 border-t md:border-t-0 border-white/5">
+                  <div className="flex-1 md:flex-none">
+                    <span className="text-[8px] font-black theme-muted uppercase tracking-widest block mb-1">کۆد/ID</span>
+                    <span className="font-mono-data text-xs text-white">#{log.entityId}</span>
+                  </div>
+                  <div className="flex-1 md:flex-none text-left">
+                    <span className="text-[8px] font-black theme-muted uppercase tracking-widest block mb-1">وردەکاری</span>
+                    <p className="text-xs font-medium text-white/70 line-clamp-1 max-w-[200px]">{log.details}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
       </div>
     </motion.div>
   );

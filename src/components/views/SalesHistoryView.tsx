@@ -8,7 +8,8 @@ import {
   ArrowUpDown,
   X,
   FileDown,
-  Download
+  Download,
+  Trash2
 } from 'lucide-react';
 import { Sale, Product, Customer } from '../../types';
 import { cn } from '../../lib/utils';
@@ -22,10 +23,11 @@ interface SalesHistoryViewProps {
   currency: string;
   invoiceTemplate?: string;
   onPrint: (title: string, content: string) => void;
+  onDeleteSale: (receiptId: string) => void;
   onBack: () => void;
 }
 
-export function SalesHistoryView({ sales, products, customers, currency, invoiceTemplate, onPrint, onBack }: SalesHistoryViewProps) {
+export function SalesHistoryView({ sales, products, customers, currency, invoiceTemplate, onPrint, onDeleteSale, onBack }: SalesHistoryViewProps) {
   const [driverFilter, setDriverFilter] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -35,6 +37,25 @@ export function SalesHistoryView({ sales, products, customers, currency, invoice
   const [showFilters, setShowFilters] = useState(false);
   const [showPrintPreview, setShowPrintPreview] = useState(false);
   const [selectedReceipt, setSelectedReceipt] = useState<any>(null);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
+
+  const handleShare = async (h: any) => {
+    const text = `وەسڵی فرۆشتن\nکڕیار: ${h.customerName}\nبەروار: ${h.date}\nکۆی گشتی: ${h.total.toLocaleString()} ${currency}\nژمارەی وەسڵ: ${h.receiptId || h.id}`;
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'وەسڵی فرۆشتن',
+          text: text,
+        });
+      } catch (err) {
+        console.error('Error sharing:', err);
+      }
+    } else {
+      navigator.clipboard.writeText(text);
+      alert('زانیارییەکان کۆپی کران');
+    }
+  };
   
   const groupedSales = (sales || [])
     .filter(s => {
@@ -254,7 +275,21 @@ export function SalesHistoryView({ sales, products, customers, currency, invoice
                 </div>
                 <div className="flex flex-col items-end gap-1">
                   <span className="text-[10px] bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-lg font-mono text-slate-500">{h.receiptId || 'وەسڵی کۆن'}</span>
-                  <button onClick={() => printReceipt(h)} className="text-teal-600 dark:text-teal-400 p-1 hover:bg-teal-50 dark:hover:bg-teal-900/20 rounded-lg"><Printer size={14} /></button>
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => handleShare(h)} className="text-blue-600 dark:text-blue-400 p-1.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg" title="Share"><Download size={14} className="rotate-180" /></button>
+                    <button onClick={() => printReceipt(h)} className="text-teal-600 dark:text-teal-400 p-1.5 hover:bg-teal-50 dark:hover:bg-teal-900/20 rounded-lg" title="Print"><Printer size={14} /></button>
+                    <button 
+                      onClick={() => {
+                        if (window.confirm('ئایا دڵنیایت لە سڕینەوەی ئەم وەسڵە؟')) {
+                          onDeleteSale(h.receiptId || h.id.toString());
+                        }
+                      }} 
+                      className="text-red-500 p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg" 
+                      title="Delete"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                 </div>
               </div>
               <div className="space-y-1">

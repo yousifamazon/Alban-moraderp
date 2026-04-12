@@ -49,17 +49,26 @@ export function DebtInView({ payments, currency, onSave, onBack }: DebtInViewPro
       </div>
 
       {recentPayments.length > 0 && (
-        <div className="space-y-2">
-          <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400 px-2">دوایین پارە وەرگیراوەکان</h3>
-          {recentPayments.map(p => (
-            <div key={p.id} className="bg-white dark:bg-slate-900 p-3 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 flex justify-between items-center">
-              <div className="text-right">
-                <span className="text-sm font-bold text-slate-700 dark:text-slate-200 block">{p.customerName}</span>
-                <span className="text-[10px] text-slate-400 dark:text-slate-500">{p.date} | {p.note}</span>
+        <div className="space-y-4">
+          <h3 className="text-[10px] font-black theme-muted uppercase tracking-widest px-2">دوایین پارە وەرگیراوەکان</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {recentPayments.map(p => (
+              <div key={p.id} className="item-card group">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
+                      <span className="font-black text-lg">$</span>
+                    </div>
+                    <div>
+                      <h3 className="font-black text-sm text-white">{p.customerName}</h3>
+                      <p className="text-[10px] theme-muted font-bold mt-1">{p.date} {p.note && `| ${p.note}`}</p>
+                    </div>
+                  </div>
+                  <b className="text-emerald-500 text-lg">{p.amount.toLocaleString()} {currency}</b>
+                </div>
               </div>
-              <span className="text-sm text-green-600 font-black">{p.amount.toLocaleString()} {currency}</span>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       )}
     </motion.div>

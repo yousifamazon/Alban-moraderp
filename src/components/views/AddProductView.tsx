@@ -1,18 +1,20 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronLeft, PackageOpen, Barcode, Plus } from 'lucide-react';
-import { Product, CustomField } from '../../types';
+import { ChevronLeft, PackageOpen, Barcode, Plus, Trash2 } from 'lucide-react';
+import { Product, CustomField, Warehouse } from '../../types';
+import { Warehouse as WarehouseIcon } from 'lucide-react';
 
 interface AddProductViewProps {
   products: Product[];
   categories: string[];
+  warehouses: Warehouse[];
   currency: string;
   customFields?: CustomField[];
   onSave: (p: Product) => void;
   onBack: () => void;
 }
 
-export function AddProductView({ products, categories, currency, customFields = [], onSave, onBack }: AddProductViewProps) {
+export function AddProductView({ products, categories, warehouses, currency, customFields = [], onSave, onBack }: AddProductViewProps) {
   const [form, setForm] = useState<Record<string, any>>({
     name: '',
     barcode: '',
@@ -23,7 +25,8 @@ export function AddProductView({ products, categories, currency, customFields = 
     minStock: '5',
     expiryDate: '',
     discount: '0',
-    unit: 'دانە'
+    unit: 'دانە',
+    warehouseId: warehouses[0]?.id || ''
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -42,6 +45,7 @@ export function AddProductView({ products, categories, currency, customFields = 
       expiryDate: form.expiryDate,
       discount: parseFloat(form.discount) || 0,
       unit: form.unit || 'دانە',
+      warehouseId: parseInt(form.warehouseId) || undefined,
       ...form // Include custom fields
     };
     
@@ -101,16 +105,34 @@ export function AddProductView({ products, categories, currency, customFields = 
                 </datalist>
               </div>
               <div className="space-y-2 md:col-span-2">
-                <label className="text-[10px] font-black theme-muted uppercase tracking-widest px-1">بارکۆد</label>
-                <div className="relative">
-                  <Barcode className="absolute right-4 top-1/2 -translate-y-1/2 theme-muted" size={18} />
+                <label className="text-[10px] font-black theme-muted uppercase tracking-widest px-1">بارکۆد (سکان بکە یان خۆکار دروستی بکە)</label>
+                <div className="relative group">
+                  <Barcode className="absolute right-4 top-1/2 -translate-y-1/2 theme-muted group-focus-within:text-blue-500 transition-colors" size={18} />
                   <input 
                     type="text" 
                     value={form.barcode} 
                     onChange={e => setForm({...form, barcode: e.target.value})} 
-                    className="w-full p-4 pr-12 bg-current/5 border-none rounded-2xl outline-none font-bold text-sm focus:ring-2 ring-current/20 transition-all" 
-                    placeholder="بارکۆد سکان بکە یان بنووسە..."
+                    className="w-full p-4 pr-12 pl-32 bg-current/5 border-none rounded-2xl outline-none font-bold text-sm focus:ring-2 ring-current/20 transition-all" 
+                    placeholder="بارکۆد سکان بکە یان لێرە بنووسە..."
                   />
+                  <div className="absolute left-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                    <button 
+                      type="button"
+                      onClick={() => setForm({...form, barcode: Math.floor(100000000 + Math.random() * 900000000).toString()})}
+                      className="px-3 py-2 bg-blue-500 text-white rounded-xl text-[10px] font-black hover:bg-blue-600 transition-all active:scale-95"
+                    >
+                      دروستکردن
+                    </button>
+                    {form.barcode && (
+                      <button 
+                        type="button"
+                        onClick={() => setForm({...form, barcode: ''})}
+                        className="p-2 bg-red-500/10 text-red-500 rounded-xl hover:bg-red-500/20 transition-all"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -162,12 +184,23 @@ export function AddProductView({ products, categories, currency, customFields = 
           <div className="pro-card p-8 border-none bg-current/5 space-y-6 rounded-3xl">
             <div className="flex items-center gap-3 mb-2">
               <div className="p-2 bg-orange-500/10 text-orange-500 rounded-xl">
-                <Barcode size={20} />
+                <WarehouseIcon size={20} />
               </div>
               <h3 className="font-black text-lg">کۆگا و بڕ</h3>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2 md:col-span-2">
+                <label className="text-[10px] font-black theme-muted uppercase tracking-widest px-1">کۆگا</label>
+                <select 
+                  value={form.warehouseId} 
+                  onChange={e => setForm({...form, warehouseId: e.target.value})} 
+                  className="w-full p-4 bg-current/5 border-none rounded-2xl outline-none font-bold text-sm focus:ring-2 ring-current/20 transition-all"
+                >
+                  <option value="">هەڵبژێرە...</option>
+                  {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+                </select>
+              </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-black theme-muted uppercase tracking-widest px-1">بڕی ئێستا (Stock)</label>
                 <input 
