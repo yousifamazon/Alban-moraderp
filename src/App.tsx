@@ -264,7 +264,7 @@ function App() {
     }
   };
 
-  // Persistence (Local storage fallback removed in favor of Firebase)
+  // Persistence (Local storage fallback)
   useEffect(() => {
     if (currentUser) {
       localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(currentUser));
@@ -272,6 +272,12 @@ function App() {
       localStorage.removeItem(USER_STORAGE_KEY);
     }
   }, [currentUser]);
+
+  useEffect(() => {
+    if (isDataLoaded) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    }
+  }, [data, isDataLoaded]);
 
   // Alert Generation
   useEffect(() => {
@@ -328,7 +334,7 @@ function App() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `ERP_Backup_${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `Alban_Murad_ERP_Backup_${new Date().toISOString().split('T')[0]}.json`;
     a.click();
     URL.revokeObjectURL(url);
     toast.success("داتاکان بە سەرکەوتوویی پاشەکەوت کران.");
@@ -343,6 +349,26 @@ function App() {
         const parsed = JSON.parse(event.target?.result as string);
         if (await customConfirm("ئایا دڵنیایت لە هاوردەکردنی ئەم داتایانە؟ هەموو داتاکانی ئێستات دەسڕێنەوە.")) {
           setData({ ...INITIAL_DATA, ...parsed });
+          
+          // Sync to Firebase
+          if (firebaseUser) {
+            const batch = writeBatch(db);
+            Object.entries(parsed).forEach(([colName, items]) => {
+              if (Array.isArray(items)) {
+                items.forEach((item: any) => {
+                  if (item.id) {
+                    const docRef = doc(db, colName, String(item.id));
+                    batch.set(docRef, item);
+                  }
+                });
+              } else if (colName === 'settings') {
+                const docRef = doc(db, 'settings', 'global');
+                batch.set(docRef, items);
+              }
+            });
+            await batch.commit();
+          }
+          
           toast.success("داتاکان بە سەرکەوتوویی هاوردە کران.");
         }
       } catch (err) {
@@ -350,6 +376,26 @@ function App() {
       }
     };
     reader.readAsText(file);
+  };
+
+  const saveToFirebase = async (colName: string, item: any) => {
+    if (!firebaseUser) return;
+    try {
+      const docRef = doc(db, colName, String(item.id || 'global'));
+      await setDoc(docRef, item);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, colName);
+    }
+  };
+
+  const deleteFromFirebase = async (colName: string, id: string | number) => {
+    if (!firebaseUser) return;
+    try {
+      const docRef = doc(db, colName, String(id));
+      await deleteDoc(docRef);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, colName);
+    }
   };
 
   // Calculations
@@ -795,25 +841,6 @@ function App() {
 
         <div className="p-6 border-t border-inherit space-y-3">
           <button 
-            onClick={exportToExcel}
-            className="w-full flex items-center gap-3 p-4 rounded-2xl transition-all font-black text-xs theme-hover border theme-border"
-          >
-            <Download size={16} />
-            <span>پاشەکەوتکردن (Excel)</span>
-          </button>
-          <button 
-            onClick={backupData}
-            className="w-full flex items-center gap-3 p-4 rounded-2xl transition-all font-black text-xs theme-hover border theme-border bg-blue-500/10 text-blue-400 border-blue-500/20"
-          >
-            <Database size={16} />
-            <span>پاشەکەوتکردن (JSON)</span>
-          </button>
-          <label className="w-full flex items-center gap-3 p-4 rounded-2xl transition-all font-black text-xs theme-hover border theme-border cursor-pointer">
-            <Upload size={16} />
-            <span>هاوردەکردن (JSON)</span>
-            <input type="file" accept=".json" onChange={restoreData} className="hidden" />
-          </label>
-          <button 
             onClick={async () => {
               const confirmed = await customConfirm('ئایا دڵنیایت لە چوونەدەرەوە؟');
               if (confirmed) {
@@ -1098,16 +1125,56 @@ function App() {
               categories={data.categories || []} 
               currency={data.settings.currency} 
               customFields={data.settings.customFields}
-              onSave={(p) => setData(prev => ({ ...prev, products: [...prev.products, p] }))} 
+              onSave={(p) => {
+                setData(prev => ({ ...prev, products: [...prev.products, p] }));
+                saveToFirebase('products', p);
+              }} 
               onBack={() => setActiveSection('hub')} 
             />
           )}
-          {activeSection === 'product-list' && <ProductListView products={data.products} currency={data.settings.currency} onPrint={handlePrint} onUpdate={(updatedProducts) => setData(prev => ({ ...prev, products: updatedProducts }))} onBack={() => setActiveSection('hub')} />}
+          {activeSection === 'product-list' && (
+            <ProductListView 
+              products={data.products} 
+              currency={data.settings.currency} 
+              onPrint={handlePrint} 
+              onUpdate={(updatedProducts) => {
+                setData(prev => ({ ...prev, products: updatedProducts }));
+                // Update changed products in Firebase
+                updatedProducts.forEach(p => saveToFirebase('products', p));
+              }} 
+              onBack={() => setActiveSection('hub')} 
+            />
+          )}
           {activeSection === 'reports-hub' && <ReportsHubView onNavigate={(s) => setActiveSection(s)} onBack={() => setActiveSection('hub')} />}
           {activeSection === 'daily-summary' && <DailySummaryReportView sales={data.sales} expenses={data.expenses} returns={data.returns || []} waste={data.waste} salaryPayments={data.salaryPayments || []} currency={data.settings.currency} onPrint={handlePrint} onBack={() => setActiveSection('reports-hub')} />}
           {activeSection === 'profits-rep' && <ProfitsReportView totalSales={totalSales} totalCost={totalCost} totalExpenses={totalExpenses} totalWaste={totalWaste} totalDiscounts={totalDiscounts} totalSalaries={totalSalaryPayments} currency={data.settings.currency} darkMode={true} onPrint={handlePrint} onBack={() => setActiveSection('reports-hub')} />}
-          {activeSection === 'spending' && <SpendingView expenses={data.expenses} currency={data.settings.currency} darkMode={true} onSave={(e) => setData(prev => ({ ...prev, expenses: [...prev.expenses, e] }))} onPrint={handlePrint} onBack={() => setActiveSection('hub')} />}
-          {activeSection === 'waste-log' && <WasteLogView products={data.products} waste={data.waste} currency={data.settings.currency} onSave={(w, updatedProducts) => setData(prev => ({ ...prev, waste: [...prev.waste, w], products: updatedProducts }))} onPrint={handlePrint} onBack={() => setActiveSection('hub')} />}
+          {activeSection === 'spending' && (
+            <SpendingView 
+              expenses={data.expenses} 
+              currency={data.settings.currency} 
+              darkMode={true} 
+              onSave={(e) => {
+                setData(prev => ({ ...prev, expenses: [...prev.expenses, e] }));
+                saveToFirebase('expenses', e);
+              }} 
+              onPrint={handlePrint} 
+              onBack={() => setActiveSection('hub')} 
+            />
+          )}
+          {activeSection === 'waste-log' && (
+            <WasteLogView 
+              products={data.products} 
+              waste={data.waste} 
+              currency={data.settings.currency} 
+              onSave={(w, updatedProducts) => {
+                setData(prev => ({ ...prev, waste: [...prev.waste, w], products: updatedProducts }));
+                saveToFirebase('waste', w);
+                updatedProducts.forEach(p => saveToFirebase('products', p));
+              }} 
+              onPrint={handlePrint} 
+              onBack={() => setActiveSection('hub')} 
+            />
+          )}
           {activeSection === 'barcode-gen' && <BarcodeGenView products={data.products} onBack={() => setActiveSection('hub')} />}
           {activeSection === 'shelf-label' && <ShelfLabelView products={data.products} currency={data.settings.currency} onBack={() => setActiveSection('hub')} />}
           {activeSection === 'qist-dash' && <QistDashView sales={data.sales} payments={data.payments} customers={data.customers || []} currency={data.settings.currency} onBack={() => setActiveSection('reports-hub')} />}
@@ -1115,13 +1182,116 @@ function App() {
           {activeSection === 'customer-list' && <CustomerListView customers={data.customers || []} sales={data.sales} currency={data.settings.currency} onBack={() => setActiveSection('hub')} />}
           {activeSection === 'low-stock' && <LowStockView products={data.products} onBack={() => setActiveSection('reports-hub')} />}
           {activeSection === 'sales-history' && <SalesHistoryView sales={data.sales} products={data.products} customers={data.customers || []} currency={data.settings.currency} invoiceTemplate={getActiveTemplate()} onPrint={handlePrint} onBack={() => setActiveSection('hub')} />}
-          {activeSection === 'livestock-mgmt' && <LivestockView initialTab="animals" animals={data.animals || []} milkingRecords={data.milkingRecords || []} healthRecords={data.healthRecords || []} feedLogs={data.feedLogs || []} vaccinationLogs={data.vaccinationLogs || []} employees={data.employees || []} onSave={(a, m, h, f, v) => setData(prev => ({ ...prev, animals: a, milkingRecords: m, healthRecords: h, feedLogs: f, vaccinationLogs: v }))} onBack={() => setActiveSection('hub')} />}
-          {activeSection === 'milking-log' && <LivestockView initialTab="milking" animals={data.animals || []} milkingRecords={data.milkingRecords || []} healthRecords={data.healthRecords || []} feedLogs={data.feedLogs || []} vaccinationLogs={data.vaccinationLogs || []} employees={data.employees || []} onSave={(a, m, h, f, v) => setData(prev => ({ ...prev, animals: a, milkingRecords: m, healthRecords: h, feedLogs: f, vaccinationLogs: v }))} onBack={() => setActiveSection('hub')} />}
-          {activeSection === 'health-log' && <LivestockView initialTab="health" animals={data.animals || []} milkingRecords={data.milkingRecords || []} healthRecords={data.healthRecords || []} feedLogs={data.feedLogs || []} vaccinationLogs={data.vaccinationLogs || []} employees={data.employees || []} onSave={(a, m, h, f, v) => setData(prev => ({ ...prev, animals: a, milkingRecords: m, healthRecords: h, feedLogs: f, vaccinationLogs: v }))} onBack={() => setActiveSection('hub')} />}
+          {activeSection === 'livestock-mgmt' && (
+            <LivestockView 
+              initialTab="animals" 
+              animals={data.animals || []} 
+              milkingRecords={data.milkingRecords || []} 
+              healthRecords={data.healthRecords || []} 
+              feedLogs={data.feedLogs || []} 
+              vaccinationLogs={data.vaccinationLogs || []} 
+              employees={data.employees || []} 
+              onSave={(a, m, h, f, v) => {
+                setData(prev => ({ ...prev, animals: a, milkingRecords: m, healthRecords: h, feedLogs: f, vaccinationLogs: v }));
+                a.forEach(item => saveToFirebase('animals', item));
+                m.forEach(item => saveToFirebase('milkingRecords', item));
+                h.forEach(item => saveToFirebase('healthRecords', item));
+                f.forEach(item => saveToFirebase('feedLogs', item));
+                v.forEach(item => saveToFirebase('vaccinationLogs', item));
+              }} 
+              onBack={() => setActiveSection('hub')} 
+            />
+          )}
+          {activeSection === 'milking-log' && (
+            <LivestockView 
+              initialTab="milking" 
+              animals={data.animals || []} 
+              milkingRecords={data.milkingRecords || []} 
+              healthRecords={data.healthRecords || []} 
+              feedLogs={data.feedLogs || []} 
+              vaccinationLogs={data.vaccinationLogs || []} 
+              employees={data.employees || []} 
+              onSave={(a, m, h, f, v) => {
+                setData(prev => ({ ...prev, animals: a, milkingRecords: m, healthRecords: h, feedLogs: f, vaccinationLogs: v }));
+                a.forEach(item => saveToFirebase('animals', item));
+                m.forEach(item => saveToFirebase('milkingRecords', item));
+                h.forEach(item => saveToFirebase('healthRecords', item));
+                f.forEach(item => saveToFirebase('feedLogs', item));
+                v.forEach(item => saveToFirebase('vaccinationLogs', item));
+              }} 
+              onBack={() => setActiveSection('hub')} 
+            />
+          )}
+          {activeSection === 'health-log' && (
+            <LivestockView 
+              initialTab="health" 
+              animals={data.animals || []} 
+              milkingRecords={data.milkingRecords || []} 
+              healthRecords={data.healthRecords || []} 
+              feedLogs={data.feedLogs || []} 
+              vaccinationLogs={data.vaccinationLogs || []} 
+              employees={data.employees || []} 
+              onSave={(a, m, h, f, v) => {
+                setData(prev => ({ ...prev, animals: a, milkingRecords: m, healthRecords: h, feedLogs: f, vaccinationLogs: v }));
+                a.forEach(item => saveToFirebase('animals', item));
+                m.forEach(item => saveToFirebase('milkingRecords', item));
+                h.forEach(item => saveToFirebase('healthRecords', item));
+                f.forEach(item => saveToFirebase('feedLogs', item));
+                v.forEach(item => saveToFirebase('vaccinationLogs', item));
+              }} 
+              onBack={() => setActiveSection('hub')} 
+            />
+          )}
           {activeSection === 'qist-alerts' && <QistAlertsView sales={data.sales} currency={data.settings.currency} onBack={() => setActiveSection('reports-hub')} />}
-          {activeSection === 'debt-in' && <DebtInView payments={data.payments} currency={data.settings.currency} onSave={(p) => setData(prev => ({ ...prev, payments: [...prev.payments, p] }))} onBack={() => setActiveSection('hub')} />}
-          {activeSection === 'factory-debt' && <FactoryDebtView debts={data.supplierDebts} payments={data.supplierPayments} currency={data.settings.currency} onSaveDebt={(d) => setData(prev => ({ ...prev, supplierDebts: [...prev.supplierDebts, d] }))} onSavePayment={(p) => setData(prev => ({ ...prev, supplierPayments: [...prev.supplierPayments, p] }))} onBack={() => setActiveSection('hub')} />}
-          {activeSection === 'suppliers-mgmt' && <SupplierManagementView suppliers={data.suppliers} debts={data.supplierDebts} payments={data.supplierPayments} currency={data.settings.currency} darkMode={true} onSave={(s) => setData(prev => ({ ...prev, suppliers: s }))} onSaveDebt={(d) => setData(prev => ({ ...prev, supplierDebts: [...prev.supplierDebts, d] }))} onSavePayment={(p) => setData(prev => ({ ...prev, supplierPayments: [...prev.supplierPayments, p] }))} onBack={() => setActiveSection('hub')} />}
+          {activeSection === 'debt-in' && (
+            <DebtInView 
+              payments={data.payments} 
+              currency={data.settings.currency} 
+              onSave={(p) => {
+                setData(prev => ({ ...prev, payments: [...prev.payments, p] }));
+                saveToFirebase('payments', p);
+              }} 
+              onBack={() => setActiveSection('hub')} 
+            />
+          )}
+          {activeSection === 'factory-debt' && (
+            <FactoryDebtView 
+              debts={data.supplierDebts} 
+              payments={data.supplierPayments} 
+              currency={data.settings.currency} 
+              onSaveDebt={(d) => {
+                setData(prev => ({ ...prev, supplierDebts: [...prev.supplierDebts, d] }));
+                saveToFirebase('supplierDebts', d);
+              }} 
+              onSavePayment={(p) => {
+                setData(prev => ({ ...prev, supplierPayments: [...prev.supplierPayments, p] }));
+                saveToFirebase('supplierPayments', p);
+              }} 
+              onBack={() => setActiveSection('hub')} 
+            />
+          )}
+          {activeSection === 'suppliers-mgmt' && (
+            <SupplierManagementView 
+              suppliers={data.suppliers} 
+              debts={data.supplierDebts} 
+              payments={data.supplierPayments} 
+              currency={data.settings.currency} 
+              darkMode={true} 
+              onSave={(s) => {
+                setData(prev => ({ ...prev, suppliers: s }));
+                s.forEach(sup => saveToFirebase('suppliers', sup));
+              }} 
+              onSaveDebt={(d) => {
+                setData(prev => ({ ...prev, supplierDebts: [...prev.supplierDebts, d] }));
+                saveToFirebase('supplierDebts', d);
+              }} 
+              onSavePayment={(p) => {
+                setData(prev => ({ ...prev, supplierPayments: [...prev.supplierPayments, p] }));
+                saveToFirebase('supplierPayments', p);
+              }} 
+              onBack={() => setActiveSection('hub')} 
+            />
+          )}
           {activeSection === 'bulk-import' && <BulkImportView onImport={(products) => setData(prev => ({ ...prev, products: [...prev.products, ...products] }))} onBack={() => setActiveSection('hub')} />}
           {activeSection === 'category-report' && <CategoryReportView sales={data.sales} currency={data.settings.currency} onBack={() => setActiveSection('reports-hub')} />}
           {activeSection === 'expense-report' && <ExpenseReportView expenses={data.expenses} currency={data.settings.currency} onBack={() => setActiveSection('reports-hub')} />}
@@ -1132,7 +1302,16 @@ function App() {
           {activeSection === 'qist-rep' && <QistRepView sales={data.sales} payments={data.payments} currency={data.settings.currency} onBack={() => setActiveSection('reports-hub')} />}
           {activeSection === 'cash-rep' && <CashRepView sales={data.sales} expenses={data.expenses} payments={data.payments} supplierPayments={data.supplierPayments} salaryPayments={data.salaryPayments} currency={data.settings.currency} onBack={() => setActiveSection('reports-hub')} />}
           {activeSection === 'jard' && <JardView products={data.products} onPrint={handlePrint} onBack={() => setActiveSection('hub')} />}
-          {activeSection === 'supplies' && <SuppliesView supplies={data.supplies} onSave={(s) => setData(prev => ({ ...prev, supplies: [...prev.supplies, s] }))} onBack={() => setActiveSection('hub')} />}
+          {activeSection === 'supplies' && (
+            <SuppliesView 
+              supplies={data.supplies} 
+              onSave={(s) => {
+                setData(prev => ({ ...prev, supplies: [...prev.supplies, s] }));
+                saveToFirebase('supplies', s);
+              }} 
+              onBack={() => setActiveSection('hub')} 
+            />
+          )}
           {activeSection === 'user-mgmt' && (
             <UserManagementView 
               users={data.users || []} 
@@ -1158,7 +1337,19 @@ function App() {
               onBack={() => setActiveSection('hub')}
             />
           )}
-          {activeSection === 'settings' && <SettingsView settings={data.settings} onBackup={backupData} onRestore={restoreData} onSave={(s) => setData(prev => ({ ...prev, settings: s }))} onBack={() => setActiveSection('hub')} />}
+          {activeSection === 'settings' && (
+            <SettingsView 
+              settings={data.settings} 
+              onBackup={backupData} 
+              onRestore={restoreData} 
+              onExportExcel={exportToExcel}
+              onSave={(s) => {
+                setData(prev => ({ ...prev, settings: s }));
+                saveToFirebase('settings', s);
+              }} 
+              onBack={() => setActiveSection('hub')} 
+            />
+          )}
           {activeSection === 'notifications' && (
             <NotificationsView 
               alerts={data.alerts || []} 
@@ -1167,9 +1358,31 @@ function App() {
               onBack={() => setActiveSection('hub')} 
             />
           )}
-          {activeSection === 'cat-mgmt' && <CategoryMgmtView categories={data.categories || []} onSave={(c) => setData(prev => ({ ...prev, categories: c }))} onBack={() => setActiveSection('hub')} />}
+          {activeSection === 'cat-mgmt' && (
+            <CategoryMgmtView 
+              categories={data.categories || []} 
+              onSave={(c) => {
+                setData(prev => ({ ...prev, categories: c }));
+                c.forEach(cat => saveToFirebase('categories', cat));
+              }} 
+              onBack={() => setActiveSection('hub')} 
+            />
+          )}
           {activeSection === 'advanced-dashboard' && <AdvancedDashboardView data={data} currency={data.settings.currency} onBack={() => setActiveSection('reports-hub')} />}
-          {activeSection === 'shift-mgmt' && <ShiftManagementView data={data} onSave={(s) => setData(prev => ({ ...prev, shifts: [...(prev.shifts || []), s] }))} onUpdate={(s) => setData(prev => ({ ...prev, shifts: (prev.shifts || []).map(sh => sh.id === s.id ? s : sh) }))} onBack={() => setActiveSection('hub')} />}
+          {activeSection === 'shift-mgmt' && (
+            <ShiftManagementView 
+              data={data} 
+              onSave={(s) => {
+                setData(prev => ({ ...prev, shifts: [...(prev.shifts || []), s] }));
+                saveToFirebase('shifts', s);
+              }} 
+              onUpdate={(s) => {
+                setData(prev => ({ ...prev, shifts: (prev.shifts || []).map(sh => sh.id === s.id ? s : sh) }));
+                saveToFirebase('shifts', s);
+              }} 
+              onBack={() => setActiveSection('hub')} 
+            />
+          )}
           {activeSection === 'pos' && (
             <POSView 
               products={data.products} 
@@ -1185,6 +1398,10 @@ function App() {
                   products: updatedProducts,
                   customers: updatedCustomers
                 }));
+                // Sync to Firebase
+                newSales.forEach(s => saveToFirebase('sales', s));
+                updatedProducts.forEach(p => saveToFirebase('products', p));
+                updatedCustomers.forEach(c => saveToFirebase('customers', c));
                 setActiveSection('hub');
               }}
               onNavigate={(s) => setActiveSection(s)}
@@ -1192,23 +1409,243 @@ function App() {
               onOpenReturns={() => setActiveSection('returns')}
             />
           )}
-          {activeSection === 'returns' && <ReturnsView returns={data.returns || []} sales={data.sales} products={data.products} customers={data.customers || []} currency={data.settings.currency} onSave={(r, updatedProducts, updatedSales, updatedCustomers) => setData(prev => ({ ...prev, returns: [...(prev.returns || []), r], products: updatedProducts, sales: updatedSales, customers: updatedCustomers }))} onBack={() => setActiveSection('hub')} />}
-          {activeSection === 'hr-mgmt' && <EmployeeManagementView employees={data.employees || []} salaryPayments={data.salaryPayments || []} currency={data.settings.currency} onSaveEmployee={(e) => setData(prev => ({ ...prev, employees: [...(prev.employees || []), e] }))} onUpdateEmployee={(e) => setData(prev => ({ ...prev, employees: (prev.employees || []).map(emp => emp.id === e.id ? e : emp) }))} onSaveSalary={(s) => setData(prev => ({ ...prev, salaryPayments: [...(prev.salaryPayments || []), s] }))} onBack={() => setActiveSection('hub')} />}
-          {activeSection === 'purchase-orders' && <PurchaseOrderView products={data.products} purchaseOrders={data.purchaseOrders || []} onSaveOrder={(o) => setData(prev => ({ ...prev, purchaseOrders: [...(prev.purchaseOrders || []), o] }))} onUpdateOrder={(o) => setData(prev => ({ ...prev, purchaseOrders: (prev.purchaseOrders || []).map(po => po.id === o.id ? o : po) }))} onReceiveOrder={(o) => setData(prev => ({ ...prev, purchaseOrders: (prev.purchaseOrders || []).map(po => po.id === o.id ? o : po) }))} onBack={() => setActiveSection('hub')} />}
-          {activeSection === 'customer-loyalty' && <CustomerLoyaltyView customers={data.customers || []} sales={data.sales} onSave={(c) => setData(prev => ({ ...prev, customers: [...(prev.customers || []), c] }))} onUpdate={(c) => setData(prev => ({ ...prev, customers: (prev.customers || []).map(cust => cust.id === c.id ? c : cust) }))} onBack={() => setActiveSection('hub')} />}
-          {activeSection === 'customer-mgmt' && <CustomerManagementView customers={data.customers || []} sales={data.sales} payments={data.payments} currency={data.settings.currency} onSave={(c) => setData(prev => ({ ...prev, customers: [...(prev.customers || []), c] }))} onUpdate={(c) => setData(prev => ({ ...prev, customers: c }))} onSavePayment={(p, updatedCustomers) => setData(prev => ({ ...prev, payments: [...prev.payments, p], customers: updatedCustomers }))} onViewDetails={(c) => { setSelectedCustomer(c); setActiveSection('customer-detail'); }} onBack={() => setActiveSection('hub')} />}
+          {activeSection === 'returns' && (
+            <ReturnsView 
+              returns={data.returns || []} 
+              sales={data.sales} 
+              products={data.products} 
+              customers={data.customers || []} 
+              currency={data.settings.currency} 
+              onSave={(r, updatedProducts, updatedSales, updatedCustomers) => {
+                setData(prev => ({ 
+                  ...prev, 
+                  returns: [...(prev.returns || []), r], 
+                  products: updatedProducts, 
+                  sales: updatedSales, 
+                  customers: updatedCustomers 
+                }));
+                saveToFirebase('returns', r);
+                updatedProducts.forEach(p => saveToFirebase('products', p));
+                updatedSales.forEach(s => saveToFirebase('sales', s));
+                updatedCustomers.forEach(c => saveToFirebase('customers', c));
+              }} 
+              onBack={() => setActiveSection('hub')} 
+            />
+          )}
+          {activeSection === 'hr-mgmt' && (
+            <EmployeeManagementView 
+              employees={data.employees || []} 
+              salaryPayments={data.salaryPayments || []} 
+              currency={data.settings.currency} 
+              onSaveEmployee={(e) => {
+                setData(prev => ({ ...prev, employees: [...(prev.employees || []), e] }));
+                saveToFirebase('employees', e);
+              }} 
+              onUpdateEmployee={(e) => {
+                setData(prev => ({ ...prev, employees: (prev.employees || []).map(emp => emp.id === e.id ? e : emp) }));
+                saveToFirebase('employees', e);
+              }} 
+              onSaveSalary={(s) => {
+                setData(prev => ({ ...prev, salaryPayments: [...(prev.salaryPayments || []), s] }));
+                saveToFirebase('salaryPayments', s);
+              }} 
+              onBack={() => setActiveSection('hub')} 
+            />
+          )}
+          {activeSection === 'purchase-orders' && (
+            <PurchaseOrderView 
+              products={data.products} 
+              purchaseOrders={data.purchaseOrders || []} 
+              onSaveOrder={(o) => {
+                setData(prev => ({ ...prev, purchaseOrders: [...(prev.purchaseOrders || []), o] }));
+                saveToFirebase('purchaseOrders', o);
+              }} 
+              onUpdateOrder={(o) => {
+                setData(prev => ({ ...prev, purchaseOrders: (prev.purchaseOrders || []).map(po => po.id === o.id ? o : po) }));
+                saveToFirebase('purchaseOrders', o);
+              }} 
+              onReceiveOrder={(o) => {
+                setData(prev => ({ ...prev, purchaseOrders: (prev.purchaseOrders || []).map(po => po.id === o.id ? o : po) }));
+                saveToFirebase('purchaseOrders', o);
+              }} 
+              onBack={() => setActiveSection('hub')} 
+            />
+          )}
+          {activeSection === 'customer-loyalty' && (
+            <CustomerLoyaltyView 
+              customers={data.customers || []} 
+              sales={data.sales} 
+              onSave={(c) => {
+                setData(prev => ({ ...prev, customers: [...(prev.customers || []), c] }));
+                saveToFirebase('customers', c);
+              }} 
+              onUpdate={(c) => {
+                setData(prev => ({ ...prev, customers: (prev.customers || []).map(cust => cust.id === c.id ? c : cust) }));
+                saveToFirebase('customers', c);
+              }} 
+              onBack={() => setActiveSection('hub')} 
+            />
+          )}
+          {activeSection === 'customer-mgmt' && (
+            <CustomerManagementView 
+              customers={data.customers || []} 
+              sales={data.sales} 
+              payments={data.payments} 
+              currency={data.settings.currency} 
+              onSave={(c) => {
+                setData(prev => ({ ...prev, customers: [...(prev.customers || []), c] }));
+                saveToFirebase('customers', c);
+              }} 
+              onUpdate={(c) => {
+                setData(prev => ({ ...prev, customers: c }));
+                c.forEach(cust => saveToFirebase('customers', cust));
+              }} 
+              onSavePayment={(p, updatedCustomers) => {
+                setData(prev => ({ ...prev, payments: [...prev.payments, p], customers: updatedCustomers }));
+                saveToFirebase('payments', p);
+                updatedCustomers.forEach(cust => saveToFirebase('customers', cust));
+              }} 
+              onViewDetails={(c) => { setSelectedCustomer(c); setActiveSection('customer-detail'); }} 
+              onBack={() => setActiveSection('hub')} 
+            />
+          )}
           {activeSection === 'customer-detail' && selectedCustomer && <CustomerDetailView customer={selectedCustomer} sales={data.sales} payments={data.payments} currency={data.settings.currency} onBack={() => setActiveSection('customer-mgmt')} />}
-          {activeSection === 'tasks' && <TasksView tasks={data.tasks || []} employees={data.employees || []} onSave={(t) => setData(prev => ({ ...prev, tasks: [...(prev.tasks || []), t] }))} onUpdate={(t) => setData(prev => ({ ...prev, tasks: (prev.tasks || []).map(task => task.id === t.id ? t : task) }))} onBack={() => setActiveSection('hub')} />}
-          {activeSection === 'assets' && <AssetsView assets={data.assets || []} currency={data.settings.currency} onSave={(a) => setData(prev => ({ ...prev, assets: [...(prev.assets || []), a] }))} onUpdate={(a) => setData(prev => ({ ...prev, assets: (prev.assets || []).map(asset => asset.id === a.id ? a : asset) }))} onBack={() => setActiveSection('hub')} />}
-          {activeSection === 'recipes' && <RecipesView recipes={data.recipes || []} products={data.products} onSave={(r) => setData(prev => ({ ...prev, recipes: [...(prev.recipes || []), r] }))} onBack={() => setActiveSection('hub')} />}
-          {activeSection === 'production' && <ProductionView orders={data.productionOrders || []} recipes={data.recipes || []} products={data.products} currency={data.settings.currency} onSave={(o) => setData(prev => ({ ...prev, productionOrders: [...(prev.productionOrders || []), o] }))} onUpdate={(o, updatedProducts) => setData(prev => ({ ...prev, productionOrders: (prev.productionOrders || []).map(po => po.id === o.id ? o : po), products: updatedProducts || prev.products }))} onBack={() => setActiveSection('hub')} />}
-          {activeSection === 'vehicles' && <VehiclesView vehicles={data.vehicles || []} employees={data.employees || []} onSave={(v) => setData(prev => ({ ...prev, vehicles: [...(prev.vehicles || []), v] }))} onUpdate={(v) => setData(prev => ({ ...prev, vehicles: (prev.vehicles || []).map(veh => veh.id === v.id ? v : veh) }))} onBack={() => setActiveSection('hub')} />}
-          {activeSection === 'drivers' && <DriversView drivers={data.drivers || []} vehicles={data.vehicles || []} onSave={(d) => setData(prev => ({ ...prev, drivers: [...(prev.drivers || []), d] }))} onUpdate={(d) => setData(prev => ({ ...prev, drivers: (prev.drivers || []).map(dr => dr.id === d.id ? d : dr) }))} onBack={() => setActiveSection('hub')} />}
+          {activeSection === 'tasks' && (
+            <TasksView 
+              tasks={data.tasks || []} 
+              employees={data.employees || []} 
+              onSave={(t) => {
+                setData(prev => ({ ...prev, tasks: [...(prev.tasks || []), t] }));
+                saveToFirebase('tasks', t);
+              }} 
+              onUpdate={(t) => {
+                setData(prev => ({ ...prev, tasks: (prev.tasks || []).map(task => task.id === t.id ? t : task) }));
+                saveToFirebase('tasks', t);
+              }} 
+              onBack={() => setActiveSection('hub')} 
+            />
+          )}
+          {activeSection === 'assets' && (
+            <AssetsView 
+              assets={data.assets || []} 
+              currency={data.settings.currency} 
+              onSave={(a) => {
+                setData(prev => ({ ...prev, assets: [...(prev.assets || []), a] }));
+                saveToFirebase('assets', a);
+              }} 
+              onUpdate={(a) => {
+                setData(prev => ({ ...prev, assets: (prev.assets || []).map(asset => asset.id === a.id ? a : asset) }));
+                saveToFirebase('assets', a);
+              }} 
+              onBack={() => setActiveSection('hub')} 
+            />
+          )}
+          {activeSection === 'recipes' && (
+            <RecipesView 
+              recipes={data.recipes || []} 
+              products={data.products} 
+              onSave={(r) => {
+                setData(prev => ({ ...prev, recipes: [...(prev.recipes || []), r] }));
+                saveToFirebase('recipes', r);
+              }} 
+              onBack={() => setActiveSection('hub')} 
+            />
+          )}
+          {activeSection === 'production' && (
+            <ProductionView 
+              orders={data.productionOrders || []} 
+              recipes={data.recipes || []} 
+              products={data.products} 
+              currency={data.settings.currency} 
+              onSave={(o) => {
+                setData(prev => ({ ...prev, productionOrders: [...(prev.productionOrders || []), o] }));
+                saveToFirebase('productionOrders', o);
+              }} 
+              onUpdate={(o, updatedProducts) => {
+                setData(prev => ({ ...prev, productionOrders: (prev.productionOrders || []).map(po => po.id === o.id ? o : po), products: updatedProducts || prev.products }));
+                saveToFirebase('productionOrders', o);
+                updatedProducts?.forEach(p => saveToFirebase('products', p));
+              }} 
+              onBack={() => setActiveSection('hub')} 
+            />
+          )}
+          {activeSection === 'vehicles' && (
+            <VehiclesView 
+              vehicles={data.vehicles || []} 
+              employees={data.employees || []} 
+              onSave={(v) => {
+                setData(prev => ({ ...prev, vehicles: [...(prev.vehicles || []), v] }));
+                saveToFirebase('vehicles', v);
+              }} 
+              onUpdate={(v) => {
+                setData(prev => ({ ...prev, vehicles: (prev.vehicles || []).map(veh => veh.id === v.id ? v : veh) }));
+                saveToFirebase('vehicles', v);
+              }} 
+              onBack={() => setActiveSection('hub')} 
+            />
+          )}
+          {activeSection === 'drivers' && (
+            <DriversView 
+              drivers={data.drivers || []} 
+              vehicles={data.vehicles || []} 
+              onSave={(d) => {
+                setData(prev => ({ ...prev, drivers: [...(prev.drivers || []), d] }));
+                saveToFirebase('drivers', d);
+              }} 
+              onUpdate={(d) => {
+                setData(prev => ({ ...prev, drivers: (prev.drivers || []).map(dr => dr.id === d.id ? d : dr) }));
+                saveToFirebase('drivers', d);
+              }} 
+              onBack={() => setActiveSection('hub')} 
+            />
+          )}
           {activeSection === 'emp-perf-report' && <EmployeePerformanceReportView employees={data.employees || []} salaryPayments={data.salaryPayments || []} shifts={data.shifts || []} currency={data.settings.currency} onBack={() => setActiveSection('reports-hub')} />}
           {activeSection === 'driver-report' && <DriverSalesReportView sales={data.sales} currency={data.settings.currency} onPrint={handlePrint} onBack={() => setActiveSection('reports-hub')} />}
-          {activeSection === 'campaigns' && <CampaignsView campaigns={data.campaigns || []} currency={data.settings.currency} onSave={(c) => setData(prev => ({ ...prev, campaigns: [...(prev.campaigns || []), c] }))} onUpdate={(c) => setData(prev => ({ ...prev, campaigns: (prev.campaigns || []).map(camp => camp.id === c.id ? c : camp) }))} onBack={() => setActiveSection('hub')} />}
-          {activeSection === 'tickets' && <SupportTicketsView tickets={data.tickets || []} customers={data.customers || []} onSave={(t) => setData(prev => ({ ...prev, tickets: [...(prev.tickets || []), t] }))} onUpdate={(t) => setData(prev => ({ ...prev, tickets: (prev.tickets || []).map(tick => tick.id === t.id ? t : tick) }))} onBack={() => setActiveSection('hub')} />}
-          {activeSection === 'projects' && <ProjectsView projects={data.projects || []} currency={data.settings.currency} onSave={(p) => setData(prev => ({ ...prev, projects: [...(prev.projects || []), p] }))} onUpdate={(p) => setData(prev => ({ ...prev, projects: (prev.projects || []).map(proj => proj.id === p.id ? p : proj) }))} onBack={() => setActiveSection('hub')} />}
+          {activeSection === 'campaigns' && (
+            <CampaignsView 
+              campaigns={data.campaigns || []} 
+              currency={data.settings.currency} 
+              onSave={(c) => {
+                setData(prev => ({ ...prev, campaigns: [...(prev.campaigns || []), c] }));
+                saveToFirebase('campaigns', c);
+              }} 
+              onUpdate={(c) => {
+                setData(prev => ({ ...prev, campaigns: (prev.campaigns || []).map(camp => camp.id === c.id ? c : camp) }));
+                saveToFirebase('campaigns', c);
+              }} 
+              onBack={() => setActiveSection('hub')} 
+            />
+          )}
+          {activeSection === 'tickets' && (
+            <SupportTicketsView 
+              tickets={data.tickets || []} 
+              customers={data.customers || []} 
+              onSave={(t) => {
+                setData(prev => ({ ...prev, tickets: [...(prev.tickets || []), t] }));
+                saveToFirebase('tickets', t);
+              }} 
+              onUpdate={(t) => {
+                setData(prev => ({ ...prev, tickets: (prev.tickets || []).map(tick => tick.id === t.id ? t : tick) }));
+                saveToFirebase('tickets', t);
+              }} 
+              onBack={() => setActiveSection('hub')} 
+            />
+          )}
+          {activeSection === 'projects' && (
+            <ProjectsView 
+              projects={data.projects || []} 
+              currency={data.settings.currency} 
+              onSave={(p) => {
+                setData(prev => ({ ...prev, projects: [...(prev.projects || []), p] }));
+                saveToFirebase('projects', p);
+              }} 
+              onUpdate={(p) => {
+                setData(prev => ({ ...prev, projects: (prev.projects || []).map(proj => proj.id === p.id ? p : proj) }));
+                saveToFirebase('projects', p);
+              }} 
+              onBack={() => setActiveSection('hub')} 
+            />
+          )}
           {activeSection === 'invoice-template' && (
             <InvoiceTemplateView 
               settings={data.settings} 
@@ -1874,7 +2311,7 @@ function SuppliesView({ supplies, onSave, onBack }: { supplies: Supply[], onSave
   );
 }
 
-function SettingsView({ settings, onBackup, onRestore, onSave, onBack }: { settings: Settings, onBackup: () => void, onRestore: (e: React.ChangeEvent<HTMLInputElement>) => void, onSave: (s: Settings) => void, onBack: () => void }) {
+function SettingsView({ settings, onBackup, onRestore, onExportExcel, onSave, onBack }: { settings: Settings, onBackup: () => void, onRestore: (e: React.ChangeEvent<HTMLInputElement>) => void, onExportExcel: () => void, onSave: (s: Settings) => void, onBack: () => void }) {
   const [name, setName] = useState(settings.storeName);
   const [curr, setCurr] = useState(settings.currency);
   const [theme, setTheme] = useState(settings.theme);
@@ -1887,12 +2324,16 @@ function SettingsView({ settings, onBackup, onRestore, onSave, onBack }: { setti
   };
 
   return (
-    <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
+    <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4 pb-12">
       <div className="flex items-center gap-2 mb-4">
         <button onClick={onBack} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full"><ChevronLeft /></button>
         <h2 className="font-bold text-lg text-slate-800 dark:text-slate-200">ڕێکخستنەکان</h2>
       </div>
+      
       <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-sm space-y-4">
+        <h3 className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+          <Command size={18} className="text-blue-500" /> زانیارییە گشتییەکان
+        </h3>
         <div>
           <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">ناوی دوکان</label>
           <input type="text" value={name} onChange={e => setName(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none" />
@@ -1919,13 +2360,19 @@ function SettingsView({ settings, onBackup, onRestore, onSave, onBack }: { setti
       </div>
 
       <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-sm space-y-4">
-        <h3 className="font-bold text-slate-700 dark:text-slate-300">پاراستنی داتا (Backup)</h3>
-        <div className="grid grid-cols-2 gap-3">
-          <button onClick={onBackup} className="flex items-center justify-center gap-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 p-4 rounded-2xl font-bold">
-            <Download size={18} /> پاشەکەوت
+        <h3 className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+          <Database size={18} className="text-emerald-500" /> بەڕێوەبردنی داتا و پاشەکەوت
+        </h3>
+        <p className="text-xs text-slate-500">لێرە دەتوانیت داتاکانی سیستەمەکە پاشەکەوت بکەیت یان هاوردەیان بکەیتەوە.</p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <button onClick={onExportExcel} className="flex items-center justify-center gap-2 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 p-4 rounded-2xl font-bold text-sm">
+            <Download size={18} /> Excel پاشەکەوت
           </button>
-          <label className="flex items-center justify-center gap-2 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 p-4 rounded-2xl font-bold cursor-pointer">
-            <Upload size={18} /> هاوردەکردن
+          <button onClick={onBackup} className="flex items-center justify-center gap-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 p-4 rounded-2xl font-bold text-sm">
+            <Database size={18} /> JSON پاشەکەوت
+          </button>
+          <label className="flex items-center justify-center gap-2 bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 p-4 rounded-2xl font-bold text-sm cursor-pointer">
+            <Upload size={18} /> JSON هاوردەکردن
             <input type="file" accept=".json" onChange={onRestore} className="hidden" />
           </label>
         </div>
