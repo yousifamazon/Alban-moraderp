@@ -31,22 +31,32 @@ export function CustomerManagementView({ customers, sales, payments, currency, o
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
+  const [creditLimit, setCreditLimit] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
 
   const handleAdd = () => {
     if (!name) return toast.error("تکایە ناوی کڕیار بنووسە");
-    onSave({ id: Date.now(), name, phone, address, debt: 0, points: 0, tier: 'bronze' });
-    setName(''); setPhone(''); setAddress(''); setShowAdd(false);
+    onSave({ 
+      id: Date.now(), 
+      name, 
+      phone, 
+      address, 
+      debt: 0, 
+      points: 0, 
+      tier: 'bronze',
+      creditLimit: parseFloat(creditLimit) || 0
+    });
+    setName(''); setPhone(''); setAddress(''); setCreditLimit(''); setShowAdd(false);
   };
 
   const handleEdit = () => {
     if (!editingCustomer || !name) return;
     const updatedCustomers = customers.map(c => 
-      c.id === editingCustomer.id ? { ...c, name, phone, address } : c
+      c.id === editingCustomer.id ? { ...c, name, phone, address, creditLimit: parseFloat(creditLimit) || 0 } : c
     );
     onUpdate(updatedCustomers);
     setEditingCustomer(null);
-    setName(''); setPhone(''); setAddress('');
+    setName(''); setPhone(''); setAddress(''); setCreditLimit('');
     toast.success("زانیارییەکانی کڕیار بە سەرکەوتوویی نوێکرایەوە");
   };
 
@@ -55,6 +65,7 @@ export function CustomerManagementView({ customers, sales, payments, currency, o
     setName(c.name);
     setPhone(c.phone || '');
     setAddress(c.address || '');
+    setCreditLimit(c.creditLimit?.toString() || '');
   };
 
   const handlePayment = () => {
@@ -106,10 +117,11 @@ export function CustomerManagementView({ customers, sales, payments, currency, o
       {showAdd && (
         <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 space-y-4">
           <h3 className="font-bold text-slate-700 dark:text-slate-300">زیادکردنی کڕیار</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="ناوی کڕیار" className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none" />
             <input type="text" value={phone} onChange={e => setPhone(e.target.value)} placeholder="ژمارە مۆبایل" className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none" />
             <input type="text" value={address} onChange={e => setAddress(e.target.value)} placeholder="ناونیشان" className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none" />
+            <input type="number" value={creditLimit} onChange={e => setCreditLimit(e.target.value)} placeholder="سەقفی قەرز" className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none" />
           </div>
           <button onClick={handleAdd} className="w-full bg-emerald-600 text-white p-3 rounded-xl font-bold">پاشەکەوتکردن</button>
         </div>
@@ -131,6 +143,10 @@ export function CustomerManagementView({ customers, sales, payments, currency, o
               <div>
                 <label className="block text-xs font-bold text-slate-500 mb-1">ناونیشان</label>
                 <input type="text" value={address} onChange={e => setAddress(e.target.value)} className="w-full p-3 border dark:border-slate-700 bg-white dark:bg-slate-800 rounded-xl text-slate-900 dark:text-slate-100 outline-none focus:border-emerald-500" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-1">سەقفی قەرز ({currency})</label>
+                <input type="number" value={creditLimit} onChange={e => setCreditLimit(e.target.value)} className="w-full p-3 border dark:border-slate-700 bg-white dark:bg-slate-800 rounded-xl text-slate-900 dark:text-slate-100 outline-none focus:border-emerald-500" />
               </div>
               <div className="flex gap-2">
                 <button onClick={handleEdit} className="flex-1 bg-emerald-600 text-white p-3 rounded-xl font-bold active:scale-95 transition-transform">پاشکەوتکردن</button>
@@ -189,6 +205,9 @@ export function CustomerManagementView({ customers, sales, payments, currency, o
             <div className="space-y-1 mb-4">
               <p className="text-sm text-slate-500 flex items-center gap-2"><Phone size={14} /> {c.phone || '---'}</p>
               <p className="text-sm text-slate-500 flex items-center gap-2"><MapPin size={14} /> {c.address || '---'}</p>
+              {c.creditLimit ? (
+                <p className="text-[10px] font-black text-orange-500 mt-2 uppercase tracking-tighter">سەقفی قەرز: {c.creditLimit.toLocaleString()} {currency}</p>
+              ) : null}
             </div>
             <div className="flex gap-2">
               <button onClick={() => setShowPayment(c)} className="flex-1 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 py-2 rounded-xl text-xs font-bold hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-all">وەرگرتنی قەرز</button>

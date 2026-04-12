@@ -14,7 +14,8 @@ import {
   Plus,
   Database,
   AlertTriangle,
-  ChevronLeft
+  ChevronLeft,
+  History
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { StatCard } from '../ui/StatCard';
@@ -52,6 +53,7 @@ export function HubView({ data, totalSales, totalExpenses, totalWaste, netProfit
   const isPositiveGrowth = growth >= 0;
 
   const unreadAlerts = data.alerts?.filter(a => !a.isRead) || [];
+  const recentLogs = data.auditLogs?.slice(0, 5) || [];
 
   // Prepare chart data for last 7 days
   const last7Days = Array.from({ length: 7 }, (_, i) => {
@@ -213,6 +215,44 @@ export function HubView({ data, totalSales, totalExpenses, totalWaste, netProfit
               >
                 بینینی هەموو ({unreadAlerts.length})
               </button>
+            )}
+          </div>
+        </div>
+
+        {/* Recent Activity */}
+        <div className="bg-white/5 border theme-border rounded-[2.5rem] p-8">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h3 className="text-xl font-black tracking-tight">چالاکییە نوێیەکان</h3>
+              <p className="text-[10px] font-bold theme-muted uppercase tracking-widest mt-1">دوایین گۆڕانکارییەکان</p>
+            </div>
+            <button 
+              onClick={() => setActiveSection('audit-logs')}
+              className="p-2 rounded-xl theme-hover border theme-border"
+            >
+              <History size={18} />
+            </button>
+          </div>
+          
+          <div className="space-y-4">
+            {recentLogs.length === 0 ? (
+              <div className="text-center py-12 opacity-20">
+                <History size={40} className="mx-auto mb-2" />
+                <p className="text-xs font-bold">هیچ چالاکییەک نییە</p>
+              </div>
+            ) : (
+              recentLogs.map(log => (
+                <div key={log.id} className="flex items-start gap-3 p-4 rounded-2xl bg-white/5 border theme-border">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center font-black text-[10px]">
+                    {log.userName.charAt(0)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-black truncate">{log.action}: {log.entity}</p>
+                    <p className="text-[10px] theme-muted truncate">{log.details}</p>
+                    <p className="text-[8px] opacity-40 mt-1">{new Date(log.date).toLocaleTimeString('ku-IQ')}</p>
+                  </div>
+                </div>
+              ))
             )}
           </div>
         </div>

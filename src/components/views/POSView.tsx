@@ -125,6 +125,15 @@ export function POSView({ products, customers, sales, currency, invoiceTemplate,
 
     const total = calculateTotal();
     
+    // Check credit limit
+    if (paymentMethod === 'qist' && selectedCustomer && selectedCustomer.creditLimit) {
+      const currentDebt = selectedCustomer.debt || 0;
+      const newDebt = total - (parseFloat(paidAmount) || 0);
+      if (currentDebt + newDebt > selectedCustomer.creditLimit) {
+        return toast.error(`ئەم کڕیارە گەیشتووەتە سەقفی قەرز. سەقفی ڕێپێدراو: ${selectedCustomer.creditLimit.toLocaleString()} ${currency}`);
+      }
+    }
+
     // Sequential Receipt ID
     const nextReceiptNumber = sales.length > 0 
       ? Math.max(...sales.map(s => parseInt(s.receiptId) || 0)) + 1 

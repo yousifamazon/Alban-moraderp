@@ -246,6 +246,7 @@ export interface Customer {
   points: number;
   tier: 'bronze' | 'silver' | 'gold' | 'platinum';
   debt: number;
+  creditLimit?: number;
 }
 
 export interface FeedLog {
@@ -480,7 +481,19 @@ export interface MilkCollection {
   note?: string;
 }
 
+export interface AuditLog {
+  id: number;
+  userId: string;
+  userName: string;
+  action: string;
+  entity: string;
+  entityId: string | number;
+  details: string;
+  date: string;
+}
+
 export interface ERPData {
+  auditLogs?: AuditLog[];
   users?: User[];
   shopRequests?: ShopRequest[];
   farmers?: Farmer[];

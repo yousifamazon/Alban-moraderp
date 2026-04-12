@@ -119,6 +119,7 @@ import { DailySummaryReportView } from './components/views/DailySummaryReportVie
 import { InvoiceTemplateView } from './components/views/InvoiceTemplateView';
 import { SystemCustomizerView } from './components/views/SystemCustomizerView';
 import { MilkCollectionView } from './components/views/MilkCollectionView';
+import { AuditLogView } from './components/views/AuditLogView';
 import { FooterNavButton, SidebarItem, StatCard } from './components/LayoutComponents';
 
 const STORAGE_KEY = 'alban_murad_erp_data';
@@ -139,6 +140,7 @@ const INITIAL_DATA: ERPData = {
   categories: ['گشتی', 'خۆراک', 'پاککەرەوە', 'پێداویستی'],
   returns: [],
   shifts: [],
+  auditLogs: [],
   employees: [],
   salaryPayments: [],
   purchaseOrders: [],
@@ -383,6 +385,11 @@ function App() {
     try {
       const docRef = doc(db, colName, String(item.id || 'global'));
       await setDoc(docRef, item);
+      
+      // Don't audit log the audit log itself to avoid infinite loops
+      if (colName !== 'auditLogs') {
+        createAuditLog('Save/Update', colName, item.id || 'global', `Saved ${colName} entry`);
+      }
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, colName);
     }
@@ -393,9 +400,26 @@ function App() {
     try {
       const docRef = doc(db, colName, String(id));
       await deleteDoc(docRef);
+      createAuditLog('Delete', colName, id, `Deleted ${colName} entry`);
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, colName);
     }
+  };
+
+  const createAuditLog = async (action: string, entity: string, entityId: string | number, details: string) => {
+    if (!firebaseUser) return;
+    const log: AuditLog = {
+      id: Date.now(),
+      userId: firebaseUser.uid,
+      userName: firebaseUser.displayName || firebaseUser.email || 'Unknown',
+      action,
+      entity,
+      entityId,
+      details,
+      date: new Date().toISOString()
+    };
+    setData(prev => ({ ...prev, auditLogs: [log, ...(prev.auditLogs || [])] }));
+    saveToFirebase('auditLogs', log);
   };
 
   // Calculations
@@ -1666,6 +1690,12 @@ function App() {
             <MilkCollectionView 
               data={data} 
               onUpdateData={setData} 
+              onBack={() => setActiveSection('hub')} 
+            />
+          )}
+          {activeSection === 'audit-logs' && (
+            <AuditLogView 
+              logs={data.auditLogs || []} 
               onBack={() => setActiveSection('hub')} 
             />
           )}
