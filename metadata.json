@@ -1,5 +1,6 @@
 {
   "name": "Alban Murad ERP",
-  "description": "Advanced ERP system with Sales POS (discounts, returns, customer debt), categorized expense reporting, supplier management, and automated daily backups.",
-  "requestFramePermissions": []
+  "description": "Advanced ERP system with Sales POS, categorized expense reporting, supplier management, and automated daily backups with Android Capacitor support.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

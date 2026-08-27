@@ -32,7 +32,7 @@ export function EmployeePerformanceReportView({ employees, salaryPayments, shift
                 </div>
                 <div>
                   <h3 className="font-black text-lg text-white">{emp.name}</h3>
-                  <p className="text-[10px] font-bold theme-muted uppercase tracking-widest mt-1">{emp.position}</p>
+                  <p className="text-[10px] font-bold theme-muted uppercase tracking-widest mt-1">{emp.role}</p>
                 </div>
               </div>
               

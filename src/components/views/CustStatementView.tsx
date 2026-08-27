@@ -5,6 +5,7 @@ import {
   Printer 
 } from 'lucide-react';
 import { Sale, Payment } from '../../types';
+import { cn } from '../../lib/utils';
 
 interface CustStatementViewProps {
   sales: Sale[];

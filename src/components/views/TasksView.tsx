@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Task, Employee } from '../../types';
+import { cn } from '../../lib/utils';
 
 interface TasksViewProps {
   tasks: Task[];

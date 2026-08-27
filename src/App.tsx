@@ -1,5 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Toaster, toast } from 'sonner';
+import { Capacitor } from '@capacitor/core';
+import { SplashScreen } from '@capacitor/splash-screen';
+import { StatusBar, Style } from '@capacitor/status-bar';
+import { App as CapApp } from '@capacitor/app';
 
 import { 
   LayoutGrid, 
@@ -212,6 +216,29 @@ function App() {
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [firebaseUser, setFirebaseUser] = useState<any>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
+
+  // Capacitor Native Android Setup
+  useEffect(() => {
+    if (Capacitor.isNativePlatform()) {
+      SplashScreen.hide().catch(() => {});
+      StatusBar.setStyle({ style: Style.Dark }).catch(() => {});
+      StatusBar.setBackgroundColor({ color: '#0B0F19' }).catch(() => {});
+
+      const backListener = CapApp.addListener('backButton', ({ canGoBack }) => {
+        if (activeSection !== 'hub') {
+          setActiveSection('hub');
+        } else if (canGoBack) {
+          window.history.back();
+        } else {
+          CapApp.exitApp();
+        }
+      });
+
+      return () => {
+        backListener.then(handle => handle.remove()).catch(() => {});
+      };
+    }
+  }, [activeSection]);
 
   // Firebase Auth Listener
   useEffect(() => {

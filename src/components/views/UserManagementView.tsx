@@ -4,7 +4,7 @@ import { ChevronLeft, Plus, Trash2, User as UserIcon, Shield, Key } from 'lucide
 import { User } from '../../types';
 import { toast } from 'sonner';
 import { MENU_ITEMS } from '../../constants';
-import { customConfirm } from '../../lib/utils';
+import { customConfirm, cn } from '../../lib/utils';
 
 interface UserManagementViewProps {
   users: User[];

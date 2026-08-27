@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">ئەلبان موراد ERP</string>
+    <string name="title_activity_main">ئەلبان موراد ERP</string>
+    <string name="package_name">com.albanmurad.erp</string>
+    <string name="custom_url_scheme">com.albanmurad.erp</string>
+</resources>

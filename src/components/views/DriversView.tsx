@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Driver, Vehicle } from '../../types';
-import { customConfirm } from '../../lib/utils';
+import { customConfirm, cn } from '../../lib/utils';
 
 interface DriversViewProps {
   drivers: Driver[];

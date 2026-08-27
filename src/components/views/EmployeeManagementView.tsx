@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Employee, SalaryPayment } from '../../types';
-import { customConfirm } from '../../lib/utils';
+import { customConfirm, cn } from '../../lib/utils';
 
 interface EmployeeManagementViewProps {
   employees: Employee[];
